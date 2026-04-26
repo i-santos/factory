@@ -1,0 +1,59 @@
+# Go build outputs
+/factory
+/bin/
+/build/
+/dist/
+*.exe
+*.dll
+*.so
+*.dylib
+*.test
+
+# Go test and profiling artifacts
+coverage.out
+coverage.*
+*.cover
+*.prof
+*.pprof
+
+# Local Go/workspace files
+go.work
+go.work.sum
+
+# Factory runtime noise
+.factory/00-control-room/d-events/*.jsonl
+.factory/00-control-room/e-state/
+.factory/00-control-room/f-logs/
+.factory/01-dock/a-incoming/
+.factory/01-dock/d-immediate-response/
+.factory/03-shop-floor/a-input-buffer/
+.factory/03-shop-floor/b-wip/
+.factory/03-shop-floor/c-hold/
+
+# Local agent/editor state
+.codex
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Local archived/reference material
+legacy/
+
+# Environment and local overrides
+.env
+.env.*
+!.env.example
+*.local
+
+# Logs and temp files
+*.log
+*.tmp
+*.temp
+tmp/
+temp/
+
+# OS files
+.DS_Store
+Thumbs.db

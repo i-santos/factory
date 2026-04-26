@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "rootDir": ".factory",
+  "factorySkill": {
+    "name": "factory",
+    "requiredSkillVersion": "0.1.0",
+    "runtimeContract": 1,
+    "workspaceSchema": 1,
+    "resourceMode": "installed-skill"
+  },
+  "commands": {
+    "registryPath": ".factory/00-control-room/a-config/commands.json",
+    "projectCommandsDir": ".factory/00-control-room/b-commands"
+  },
+  "events": {
+    "bindingsPath": ".factory/00-control-room/a-config/event-bindings.json",
+    "logDir": ".factory/00-control-room/d-events",
+    "maxAutoIterations": 25
+  },
+  "sectors": {
+    "rootDir": ".factory/05-sectors"
+  }
+}
