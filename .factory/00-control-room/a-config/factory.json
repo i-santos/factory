@@ -5,8 +5,15 @@
     "name": "factory",
     "requiredSkillVersion": "0.1.0",
     "runtimeContract": 1,
-    "workspaceSchema": 1,
-    "resourceMode": "installed-skill"
+    "workspaceSchema": 8,
+    "resourceMode": "installed-skill",
+    "releaseTopology": {
+      "enabled": false,
+      "defaultEnvironment": null,
+      "environments": [],
+      "promotions": [],
+      "syncAfterLand": []
+    }
   },
   "commands": {
     "registryPath": ".factory/00-control-room/a-config/commands.json",

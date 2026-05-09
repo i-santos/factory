@@ -1,0 +1,6 @@
+# Factory local runtime state.
+/00-control-room/e-state/
+/00-control-room/f-logs/
+/00-control-room/g-index/
+/03-shop-floor/b-wip/
+/05-labs/
