@@ -173,6 +173,10 @@ This is larger than one delivery unit. It changes the product model, terminology
 | WO-06 | candidate | waiting-for WO-01 for design baseline |
 | WO-07 | candidate | waiting-for first CLI and GUI slices |
 
+## Produced Work Orders
+
+- WO-01: `.factory/03-shop-floor/a-input-buffer/20260509T033940Z-produce-product-triangulation-artifacts.dir/work-order.md`
+
 ## Completion Signal
 
 This package is complete when:
