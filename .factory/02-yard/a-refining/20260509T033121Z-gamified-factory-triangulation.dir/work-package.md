@@ -166,7 +166,7 @@ This is larger than one delivery unit. It changes the product model, terminology
 | Work Order | Status | Readiness |
 | --- | --- | --- |
 | WO-01 | integrated | done |
-| WO-02 | candidate | ready |
+| WO-02 | integrated | done |
 | WO-03 | candidate | ready |
 | WO-04 | candidate | waiting-for WO-02 and WO-03 |
 | WO-05 | candidate | waiting-for WO-01, WO-02, and WO-03 |
@@ -195,6 +195,9 @@ Recommended next candidates:
 - WO-01: Product triangulation artifacts integrated from `factory/order/20260509T033940Z-produce-product-triangulation-artifacts` into `factory/package/20260509T033121Z-triangulation-strategy`.
   - Merge commit: `3c2f71031369558847765530fc587b6ab10d7278`
   - Release-ready evidence: `.factory/04-finished-goods/b-release-ready/20260509T034200Z-gamified-factory-triangulation-docs.md`
+- WO-02: Circuit runtime kernel contract integrated from `factory/order/20260509T035600Z-define-circuit-runtime-kernel-contract` into `factory/package/20260509T033121Z-triangulation-strategy`.
+  - Merge commit: `35ea801be173515d2406e60ef6b01db3d99dae48`
+  - Release-ready evidence: `.factory/04-finished-goods/b-release-ready/20260509T035900Z-circuit-runtime-kernel-contract.md`
 
 ## Completion Signal
 
