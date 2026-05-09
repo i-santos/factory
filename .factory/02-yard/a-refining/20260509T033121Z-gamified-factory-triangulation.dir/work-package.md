@@ -168,7 +168,7 @@ This is larger than one delivery unit. It changes the product model, terminology
 | WO-01 | integrated | done |
 | WO-02 | integrated | done |
 | WO-03 | integrated | done |
-| WO-04 | candidate | ready |
+| WO-04 | integrated | done |
 | WO-05 | candidate | ready |
 | WO-06 | candidate | ready for design baseline |
 | WO-07 | candidate | waiting-for first CLI and GUI slices |
@@ -203,6 +203,9 @@ Recommended next candidates:
 - WO-03: Reusable factory project model integrated from `factory/order/20260509T035806Z-model-reusable-factory-pieces` into `factory/package/20260509T033121Z-triangulation-strategy`.
   - Merge commit: `b43306f492b18bf4be56d9e48ec9e483ae58c934`
   - Release-ready evidence: `.factory/04-finished-goods/b-release-ready/20260509T040100Z-reusable-factory-project-model.md`
+- WO-04: Serial machine orchestrator integrated from `factory/order/20260509T040012Z-build-serial-machine-orchestrator` into `factory/package/20260509T033121Z-triangulation-strategy`.
+  - Merge commit: `a7bd0e8d40cbc73ad403ec020ec56424fd9d7237`
+  - Release-ready evidence: `.factory/04-finished-goods/b-release-ready/20260509T040500Z-serial-machine-orchestrator.md`
 
 ## Completion Signal
 
