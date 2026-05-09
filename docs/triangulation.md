@@ -27,6 +27,7 @@ The orchestrator is deterministic application code. It loads factory configurati
 - [Use Cases](use-cases.md)
 - [Architecture](architecture.md)
 - [Runtime Kernel](runtime-kernel.md)
+- [Project Model](project-model.md)
 
 ## Invariants
 

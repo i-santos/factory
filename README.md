@@ -98,3 +98,4 @@ The current product baseline is the gamified factory model:
 - [Use Cases](docs/use-cases.md)
 - [Architecture](docs/architecture.md)
 - [Runtime Kernel](docs/runtime-kernel.md)
+- [Project Model](docs/project-model.md)
