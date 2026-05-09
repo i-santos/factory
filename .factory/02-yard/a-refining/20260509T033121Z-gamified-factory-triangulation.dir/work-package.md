@@ -165,7 +165,7 @@ This is larger than one delivery unit. It changes the product model, terminology
 
 | Work Order | Status | Readiness |
 | --- | --- | --- |
-| WO-01 | candidate | ready |
+| WO-01 | integrated | done |
 | WO-02 | candidate | waiting-for WO-01 |
 | WO-03 | candidate | waiting-for WO-01 |
 | WO-04 | candidate | waiting-for WO-02 and WO-03 |
@@ -176,6 +176,12 @@ This is larger than one delivery unit. It changes the product model, terminology
 ## Produced Work Orders
 
 - WO-01: `.factory/03-shop-floor/a-input-buffer/20260509T033940Z-produce-product-triangulation-artifacts.dir/work-order.md`
+
+## Integrated Work Orders
+
+- WO-01: Product triangulation artifacts integrated from `factory/order/20260509T033940Z-produce-product-triangulation-artifacts` into `factory/package/20260509T033121Z-triangulation-strategy`.
+  - Merge commit: `3c2f71031369558847765530fc587b6ab10d7278`
+  - Release-ready evidence: `.factory/04-finished-goods/b-release-ready/20260509T034200Z-gamified-factory-triangulation-docs.md`
 
 ## Completion Signal
 
