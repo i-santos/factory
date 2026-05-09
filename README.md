@@ -65,6 +65,16 @@ Run a command:
 go run ./cmd/factory run load-intake --data '{"text":"..."}'
 ```
 
+Visualize the current factory:
+
+```bash
+go run ./cmd/factory visualize
+go run ./cmd/factory visualize --format json
+go run ./cmd/factory visualize --output .factory/00-control-room/e-state/factory-flow.mmd
+```
+
+The visualization reads the configured workspace lanes, registered commands, event bindings, sectors, sector actions, and prompt references to sectors.
+
 ## Development
 
 Run tests with a writable Go cache:

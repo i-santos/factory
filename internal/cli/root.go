@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"factory/internal/factory"
@@ -28,6 +29,7 @@ func NewRootCommand() *cobra.Command {
 	cmd.AddCommand(newCommandCommand(opts))
 	cmd.AddCommand(newEventCommand(opts))
 	cmd.AddCommand(newRunCommand(opts))
+	cmd.AddCommand(newVisualizeCommand(opts))
 	return cmd
 }
 
@@ -182,6 +184,48 @@ func newRunCommand(opts *rootOptions) *cobra.Command {
 	cmd.Flags().StringVar(&data, "data", "{}", "JSON object passed as command input")
 	cmd.Flags().IntVar(&maxAutoIterations, "max-auto-iterations", 0, "Maximum automatic event-binding continuations")
 	cmd.Flags().StringVar(&agentCommand, "agent-command", "codex exec", "Agent command used to execute Factory.call")
+	return cmd
+}
+
+func newVisualizeCommand(opts *rootOptions) *cobra.Command {
+	var format string
+	var output string
+	cmd := &cobra.Command{
+		Use:   "visualize",
+		Short: "Visualize the current factory workspace",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			graph, err := factory.BuildFactoryGraph(factory.VisualizationOptions{
+				ProjectRoot:   opts.projectRoot,
+				WorkspaceRoot: opts.workspaceRoot,
+			})
+			if err != nil {
+				return err
+			}
+			var data []byte
+			switch format {
+			case "mermaid":
+				data = []byte(factory.RenderFactoryGraphMermaid(graph))
+			case "json":
+				data, err = factory.RenderFactoryGraphJSON(graph)
+				if err != nil {
+					return err
+				}
+				data = append(data, '\n')
+			default:
+				return fmt.Errorf("--format must be mermaid or json")
+			}
+			if strings.TrimSpace(output) == "" {
+				_, err = cmd.OutOrStdout().Write(data)
+				return err
+			}
+			if err := os.MkdirAll(filepath.Dir(output), 0o755); err != nil {
+				return err
+			}
+			return os.WriteFile(output, data, 0o644)
+		},
+	}
+	cmd.Flags().StringVar(&format, "format", "mermaid", "Output format: mermaid or json")
+	cmd.Flags().StringVar(&output, "output", "", "Write visualization to a file instead of stdout")
 	return cmd
 }
 
