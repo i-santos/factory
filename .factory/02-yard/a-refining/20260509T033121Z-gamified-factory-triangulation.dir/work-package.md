@@ -177,13 +177,13 @@ This is larger than one delivery unit. It changes the product model, terminology
 
 Status: `blocked-or-waiting`
 
-The package has produced and integrated the triangulation baseline. The remaining work orders now cross runtime contract design, reusable project model, orchestrator implementation, new-factory initialization, GUI foundation, and CLI/GUI alignment. Continue by selecting the next explicit refinement target instead of forcing all implementation slices in one unattended run.
+The package has produced and integrated the triangulation baseline, runtime-kernel contract, reusable project model, and first serial orchestrator slice. The remaining work orders require explicit product choices before implementation continues safely.
 
-Recommended next candidates:
+Missing evidence before continuing:
 
-- WO-02: Define The Circuit Runtime Kernel Contract
-- WO-03: Model Reusable Factory Pieces
-- WO-06: Create The Gamified Visualization Foundation
+- WO-05: clarify the exact new-factory init-prompt behavior, including whether `factory init` should execute Codex immediately or only scaffold an init circuit/automation.
+- WO-06: choose the GUI foundation stack and first playable view shape.
+- WO-07: wait until at least one GUI slice exists.
 
 ## Produced Work Orders
 
