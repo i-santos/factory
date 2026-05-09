@@ -85,7 +85,7 @@ factory-project/
 │   └── triangulation/
 ```
 
-The exact layout can evolve, but the model must remain stable:
+The exact layout can evolve, but the model must remain stable. The reusable project model is specified in [Reusable Factory Project Model](project-model.md):
 
 - circuits are reusable prompt runtimes
 - machines are ordered circuit sets
