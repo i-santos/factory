@@ -188,6 +188,7 @@ Recommended next candidates:
 ## Produced Work Orders
 
 - WO-01: `.factory/03-shop-floor/a-input-buffer/20260509T033940Z-produce-product-triangulation-artifacts.dir/work-order.md`
+- WO-02: `.factory/03-shop-floor/a-input-buffer/20260509T035600Z-define-circuit-runtime-kernel-contract.dir/work-order.md`
 
 ## Integrated Work Orders
 
