@@ -166,12 +166,24 @@ This is larger than one delivery unit. It changes the product model, terminology
 | Work Order | Status | Readiness |
 | --- | --- | --- |
 | WO-01 | integrated | done |
-| WO-02 | candidate | waiting-for WO-01 |
-| WO-03 | candidate | waiting-for WO-01 |
+| WO-02 | candidate | ready |
+| WO-03 | candidate | ready |
 | WO-04 | candidate | waiting-for WO-02 and WO-03 |
 | WO-05 | candidate | waiting-for WO-01, WO-02, and WO-03 |
-| WO-06 | candidate | waiting-for WO-01 for design baseline |
+| WO-06 | candidate | ready for design baseline |
 | WO-07 | candidate | waiting-for first CLI and GUI slices |
+
+## Package Processing State
+
+Status: `blocked-or-waiting`
+
+The package has produced and integrated the triangulation baseline. The remaining work orders now cross runtime contract design, reusable project model, orchestrator implementation, new-factory initialization, GUI foundation, and CLI/GUI alignment. Continue by selecting the next explicit refinement target instead of forcing all implementation slices in one unattended run.
+
+Recommended next candidates:
+
+- WO-02: Define The Circuit Runtime Kernel Contract
+- WO-03: Model Reusable Factory Pieces
+- WO-06: Create The Gamified Visualization Foundation
 
 ## Produced Work Orders
 
