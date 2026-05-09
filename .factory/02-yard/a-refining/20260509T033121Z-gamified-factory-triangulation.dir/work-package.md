@@ -167,9 +167,9 @@ This is larger than one delivery unit. It changes the product model, terminology
 | --- | --- | --- |
 | WO-01 | integrated | done |
 | WO-02 | integrated | done |
-| WO-03 | candidate | ready |
-| WO-04 | candidate | waiting-for WO-02 and WO-03 |
-| WO-05 | candidate | waiting-for WO-01, WO-02, and WO-03 |
+| WO-03 | integrated | done |
+| WO-04 | candidate | ready |
+| WO-05 | candidate | ready |
 | WO-06 | candidate | ready for design baseline |
 | WO-07 | candidate | waiting-for first CLI and GUI slices |
 
@@ -199,6 +199,9 @@ Recommended next candidates:
 - WO-02: Circuit runtime kernel contract integrated from `factory/order/20260509T035600Z-define-circuit-runtime-kernel-contract` into `factory/package/20260509T033121Z-triangulation-strategy`.
   - Merge commit: `35ea801be173515d2406e60ef6b01db3d99dae48`
   - Release-ready evidence: `.factory/04-finished-goods/b-release-ready/20260509T035900Z-circuit-runtime-kernel-contract.md`
+- WO-03: Reusable factory project model integrated from `factory/order/20260509T035806Z-model-reusable-factory-pieces` into `factory/package/20260509T033121Z-triangulation-strategy`.
+  - Merge commit: `b43306f492b18bf4be56d9e48ec9e483ae58c934`
+  - Release-ready evidence: `.factory/04-finished-goods/b-release-ready/20260509T040100Z-reusable-factory-project-model.md`
 
 ## Completion Signal
 
