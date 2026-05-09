@@ -89,6 +89,11 @@ Build the CLI:
 env GOCACHE=/tmp/go-build GOMODCACHE=/tmp/go-mod go build -o /tmp/factory-cli ./cmd/factory
 ```
 
-## Architecture
+## Product Triangulation
 
-See [docs/architecture.md](docs/architecture.md).
+The current product baseline is the gamified factory model:
+
+- [Triangulation](docs/triangulation.md)
+- [Roadmap](docs/roadmap.md)
+- [Use Cases](docs/use-cases.md)
+- [Architecture](docs/architecture.md)
