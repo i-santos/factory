@@ -1,175 +1,149 @@
-# CLI Factory Architecture
+# Gamified Factory Architecture
 
-Purpose: define the next factory model where the CLI creates and runs configurable factories, while agents execute command prompt programs as the runtime.
+This architecture supersedes the earlier command-centric model. Compatibility with that model is intentionally out of scope for the current pivot.
 
-## Core Decision
+## System Shape
 
-A factory is a configured domain, not a hard-coded workflow.
+Factory has two product surfaces:
 
-The factory CLI owns:
-- creating factory workspaces
-- registering commands
-- registering event bindings
-- registering sectors
-- invoking agent runtime sessions
-- waiting for structured command results
-- deciding the next command from durable event and result contracts
+- **CLI:** creates, validates, runs, imports, exports, and inspects local factory projects.
+- **GUI:** visualizes and operates factories as a gamified production system.
 
-The agent owns:
-- executing one command prompt program
-- using repository tools to do real work
-- producing artifacts and handoffs
-- returning a structured result
+Both surfaces read and write the same factory folder. One factory equals one filesystem project.
+
+## Runtime Responsibilities
+
+The orchestrator is real application code. It is not an agent.
+
+The orchestrator owns:
+- loading factories
+- loading automations
+- loading machines
+- loading circuits
+- invoking circuits with `codex exec`
+- passing configured input and output between circuits
+- waiting for each circuit and machine to finish
+- recording execution state
+- stopping on failure or blocked output
+
+The circuit owns:
+- loading `runtime-kernel.md`
+- executing one prompt-program
+- using tools when requested by `Tool.call(...)`
+- reasoning through `Pseudo.*` operations
+- returning structured output
 - recording trace evidence
 
-The CLI must not know what `load-intake`, `drain-work-package`, or any other user-defined command means. It only knows how to resolve command definitions, invoke an agent with the resolved command prompt, validate the result envelope, emit events, and follow configured event bindings.
+## Execution Model
 
-## Factory Shape
-
-A factory app is the CLI in the repository root. A factory workspace is the `.factory/` directory that stores workflow definitions, handoffs, artifacts, events, logs, and other project-local state.
-
-A factory workspace contains:
-- `control-room`: config, command registry, event bindings, schemas, and runtime logs
-- `sectors`: domain modules that provide findings and callable actions
-- `workspace state`: intake, work packages, active work, shipped artifacts, and archives
-
-Recommended project-local shape:
+Automation execution is serial at the orchestrator level:
 
 ```text
-.factory/
-├── 00-control-room/
-│   ├── a-config/
-│   ├── b-commands/
-│   ├── c-schemas/
-│   ├── d-events/
-│   ├── e-state/
-│   └── f-logs/
-├── 01-dock/
-├── 02-yard/
-├── 03-shop-floor/
-├── 04-finished-goods/
-└── 05-sectors/
-    └── <sector-name>/
-        ├── findings/
-        └── actions/
+automation
+  machine 1
+    circuit 1
+    circuit 2
+  machine 2
+    circuit 1
 ```
 
-## Command Model
+The orchestrator waits for each circuit to finish before invoking the next circuit. The orchestrator waits for each machine to finish before invoking the next machine.
 
-A command is the only executable factory unit.
+Parallel execution is not an orchestrator concern in the first version. If parallel work is needed, a circuit may spawn subagents as part of its own prompt-program.
 
-Steps, audits, reviewers, refiners, drains, loaders, and sector actions are commands at different abstraction levels. They may still be stored in folders named `steps/`, `audits/`, or `actions/` for human orientation, but their runtime boundary is the same:
+## Runtime Kernel
 
-```json
-{
-  "name": "command-name",
-  "prompt": "project://.factory/00-control-room/b-commands/command-name.md",
-  "aliases": [],
-  "description": "Human-facing summary.",
-  "inputSchema": "project://.factory/00-control-room/c-schemas/command-name.input.schema.json",
-  "resultSchema": "factory://schemas/command-result.v1.json",
-  "emits": ["command.completed", "command.blocked"],
-  "consumes": ["operator.requested"]
-}
-```
+Every circuit loads a runtime kernel before executing its program. The kernel defines the syntax and execution contract for prompt-programs.
 
-Built-in commands are app-provided defaults. Project commands are user-created commands. The command catalog is the merged registry, not a fixed list compiled into the CLI.
+Initial primitives:
 
-## Event Model
+- `<code>`: executable pseudocode block
+- `<comment>`: guidance and non-executable context
+- `Runtime.input`: input supplied by the orchestrator
+- `Assert`: deterministic guard that blocks execution on failure
+- `Tool.call(tool_ref, input)`: external tool/script invocation
+- `Trace.event(event)`: durable runtime trace
+- `Pseudo.*`: pseudocode operation inferred by the circuit agent within the kernel boundary
 
-Events connect commands without turning the factory into a rigid state machine.
+The contract must be deterministic enough for reliable orchestration, while preserving agent reasoning for high-level pseudocode operations.
 
-An event is a durable fact that something happened:
+## Project Storage
 
-```json
-{
-  "eventId": "evt_...",
-  "eventType": "command.completed",
-  "factoryId": "default",
-  "command": "load-intake",
-  "status": "succeeded",
-  "artifactRefs": ["project://.factory/03-shop-floor/d-work-packages/pkg.dir"],
-  "data": {
-    "package_path": ".factory/03-shop-floor/d-work-packages/pkg.dir"
-  }
-}
-```
-
-An event binding maps an event to the next command:
-
-```json
-{
-  "on": "command.completed",
-  "where": {
-    "command": "load-intake",
-    "result.status": "work-package-created"
-  },
-  "run": "drain-work-package",
-  "input": {
-    "package_path": "$event.data.package_path"
-  },
-  "mode": "auto"
-}
-```
-
-The CLI may loop only through this contract:
-1. run one command
-2. validate its result envelope
-3. append a command event
-4. find matching event bindings
-5. invoke the next configured command
-6. stop on no binding, blocked result, failed validation, operator approval requirement, or iteration guard
-
-## Command Result Envelope
-
-Every command must return a deterministic envelope:
-
-```json
-{
-  "status": "succeeded|blocked|failed|waiting",
-  "resultType": "free-form-type-owned-by-command",
-  "summary": "Short operator-facing summary.",
-  "artifacts": [],
-  "events": [],
-  "next": {
-    "recommendation": "optional-command-name",
-    "input": {}
-  },
-  "missingEvidence": [],
-  "errors": []
-}
-```
-
-The CLI may use only envelope fields, explicit event bindings, and configured schemas for orchestration decisions. It must not parse arbitrary prose from agent output to decide the next autonomous step.
-
-## Sector Model
-
-A sector is a domain module that composes commands.
-
-Sectors own:
-- findings: durable project knowledge for retrieval and grounding
-- actions: sector-scoped commands
-- optional adapters: links to external tools or agent capabilities
-
-Example:
+Recommended project shape:
 
 ```text
-.factory/05-sectors/product/
-├── findings/
-│   └── experience-principles.md
-└── actions/
-    └── refine-experience.md
+factory-project/
+├── .factory/
+│   ├── circuits/
+│   ├── machines/
+│   ├── automations/
+│   ├── sectors/
+│   ├── templates/
+│   ├── runtime/
+│   │   └── runtime-kernel.md
+│   ├── runs/
+│   └── triangulation/
 ```
 
-A command may depend on a sector action by calling it as another command. The sector does not get a separate execution primitive.
+The exact layout can evolve, but the model must remain stable:
 
-## Boundary Rules
+- circuits are reusable prompt runtimes
+- machines are ordered circuit sets
+- automations are ordered machine workflows
+- sectors are organization-only
+- templates are exportable factory definitions
 
-- Commands are executable units.
-- Events are orchestration facts.
-- Event bindings are orchestration rules.
-- Sectors are domain modules.
-- Findings are retrieval context, not executable behavior.
-- The CLI runs command chains but does not interpret command-specific meaning.
-- Agents execute command prompts but do not call the factory CLI to execute nested factory work.
-- A command may recommend a next command, but automatic continuation requires a matching event binding or explicit operator request.
+## New Factory Flow
+
+Creating a factory starts from a folder and an init prompt.
+
+Flow:
+
+1. create or select factory folder
+2. initialize workspace
+3. create or select init circuit
+4. run the init prompt through the circuit runtime
+5. produce initial triangulation
+6. persist starter circuits, machines, sectors, and automations
+7. make the factory available in CLI and GUI
+
+## GUI Architecture
+
+The GUI must be built around the factory map, not around forms first.
+
+Primary views:
+- factory map
+- circuit editor
+- machine editor
+- automation editor
+- sector organizer
+- run monitor
+- template import/export
+
+The map should show execution state directly: idle, running, blocked, failed, and completed.
+
+## CLI Architecture
+
+The CLI exposes the same model without requiring the GUI.
+
+Initial command families:
+- `factory init`
+- `factory circuit ...`
+- `factory machine ...`
+- `factory automation ...`
+- `factory sector ...`
+- `factory run machine <name>`
+- `factory run automation <name>`
+- `factory template export`
+- `factory template import`
+- `factory validate`
+
+## Architectural Invariants
+
+- A circuit is the only agent-executed unit.
+- A machine is not an agent; it is an ordered circuit definition.
+- An automation is not an agent; it is an ordered machine workflow.
+- A sector never constrains execution.
+- The orchestrator must not interpret prompt-specific meaning.
+- Prompt-programs must follow the runtime kernel.
+- Factory state must be reusable and portable across local projects.
