@@ -53,7 +53,7 @@ Parallel execution is not an orchestrator concern in the first version. If paral
 
 ## Runtime Kernel
 
-Every circuit loads a runtime kernel before executing its program. The kernel defines the syntax and execution contract for prompt-programs.
+Every circuit loads a runtime kernel before executing its program. The kernel defines the syntax and execution contract for prompt-programs. The detailed contract is documented in [Circuit Runtime Kernel Contract](runtime-kernel.md).
 
 Initial primitives:
 
