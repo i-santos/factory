@@ -184,6 +184,74 @@ func newRunCommand(opts *rootOptions) *cobra.Command {
 	cmd.Flags().StringVar(&data, "data", "{}", "JSON object passed as command input")
 	cmd.Flags().IntVar(&maxAutoIterations, "max-auto-iterations", 0, "Maximum automatic event-binding continuations")
 	cmd.Flags().StringVar(&agentCommand, "agent-command", "codex exec", "Agent command used to execute Factory.call")
+	cmd.AddCommand(newRunMachineCommand(opts))
+	cmd.AddCommand(newRunAutomationCommand(opts))
+	return cmd
+}
+
+func newRunMachineCommand(opts *rootOptions) *cobra.Command {
+	var data string
+	var agentCommand string
+	cmd := &cobra.Command{
+		Use:   "machine <name>",
+		Short: "Run a machine through serial circuit orchestration",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			input, err := parseJSONData(data)
+			if err != nil {
+				return err
+			}
+			result, err := factory.RunMachine(cmd.Context(), factory.OrchestratorOptions{
+				ProjectRoot:   opts.projectRoot,
+				WorkspaceRoot: opts.workspaceRoot,
+				Runner: factory.CodexCircuitRunner{
+					AgentCommand: splitCommand(agentCommand),
+					WorkDir:      opts.projectRoot,
+				},
+			}, args[0], input)
+			if err != nil {
+				return err
+			}
+			enc := json.NewEncoder(cmd.OutOrStdout())
+			enc.SetIndent("", "  ")
+			return enc.Encode(result)
+		},
+	}
+	cmd.Flags().StringVar(&data, "data", "{}", "JSON object passed as machine input")
+	cmd.Flags().StringVar(&agentCommand, "agent-command", "codex exec", "Agent command used to execute circuits")
+	return cmd
+}
+
+func newRunAutomationCommand(opts *rootOptions) *cobra.Command {
+	var data string
+	var agentCommand string
+	cmd := &cobra.Command{
+		Use:   "automation <name>",
+		Short: "Run an automation through serial machine orchestration",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			input, err := parseJSONData(data)
+			if err != nil {
+				return err
+			}
+			result, err := factory.RunAutomation(cmd.Context(), factory.OrchestratorOptions{
+				ProjectRoot:   opts.projectRoot,
+				WorkspaceRoot: opts.workspaceRoot,
+				Runner: factory.CodexCircuitRunner{
+					AgentCommand: splitCommand(agentCommand),
+					WorkDir:      opts.projectRoot,
+				},
+			}, args[0], input)
+			if err != nil {
+				return err
+			}
+			enc := json.NewEncoder(cmd.OutOrStdout())
+			enc.SetIndent("", "  ")
+			return enc.Encode(result)
+		},
+	}
+	cmd.Flags().StringVar(&data, "data", "{}", "JSON object passed as automation input")
+	cmd.Flags().StringVar(&agentCommand, "agent-command", "codex exec", "Agent command used to execute circuits")
 	return cmd
 }
 
@@ -274,6 +342,17 @@ func parseWhere(values []string) map[string]string {
 		out[strings.TrimSpace(key)] = strings.TrimSpace(val)
 	}
 	return out
+}
+
+func parseJSONData(data string) (map[string]interface{}, error) {
+	input := map[string]interface{}{}
+	if strings.TrimSpace(data) == "" {
+		return input, nil
+	}
+	if err := json.Unmarshal([]byte(data), &input); err != nil {
+		return nil, fmt.Errorf("--data must be a JSON object: %w", err)
+	}
+	return input, nil
 }
 
 func ExecuteForTest(args ...string) error {
