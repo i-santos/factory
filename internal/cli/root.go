@@ -26,11 +26,50 @@ func NewRootCommand() *cobra.Command {
 	cmd.PersistentFlags().StringVar(&opts.projectRoot, "project-root", ".", "Project root containing the factory workspace")
 	cmd.PersistentFlags().StringVar(&opts.workspaceRoot, "workspace-root", factory.DefaultWorkspaceRoot, "Factory workspace root")
 	cmd.AddCommand(newInitCommand(opts))
+	cmd.AddCommand(newUpdateCommand(opts))
+	cmd.AddCommand(newValidateCommand(opts))
 	cmd.AddCommand(newCommandCommand(opts))
 	cmd.AddCommand(newEventCommand(opts))
 	cmd.AddCommand(newRunCommand(opts))
 	cmd.AddCommand(newVisualizeCommand(opts))
+	cmd.AddCommand(newGUICommand(opts))
 	return cmd
+}
+
+func newValidateCommand(opts *rootOptions) *cobra.Command {
+	return &cobra.Command{
+		Use:   "validate",
+		Short: "Validate the shared factory project model",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			result, err := factory.ValidateWorkspace(opts.projectRoot, opts.workspaceRoot)
+			if err != nil {
+				return err
+			}
+			enc := json.NewEncoder(cmd.OutOrStdout())
+			enc.SetIndent("", "  ")
+			if err := enc.Encode(result); err != nil {
+				return err
+			}
+			if result.Status != "valid" {
+				return fmt.Errorf("factory workspace is invalid")
+			}
+			return nil
+		},
+	}
+}
+
+func newUpdateCommand(opts *rootOptions) *cobra.Command {
+	return &cobra.Command{
+		Use:   "update",
+		Short: "Update a project-local factory workspace",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := factory.UpdateWorkspace(opts.projectRoot, opts.workspaceRoot); err != nil {
+				return err
+			}
+			fmt.Fprintf(cmd.OutOrStdout(), "updated %s\n", opts.workspaceRoot)
+			return nil
+		},
+	}
 }
 
 func newInitCommand(opts *rootOptions) *cobra.Command {
@@ -184,6 +223,74 @@ func newRunCommand(opts *rootOptions) *cobra.Command {
 	cmd.Flags().StringVar(&data, "data", "{}", "JSON object passed as command input")
 	cmd.Flags().IntVar(&maxAutoIterations, "max-auto-iterations", 0, "Maximum automatic event-binding continuations")
 	cmd.Flags().StringVar(&agentCommand, "agent-command", "codex exec", "Agent command used to execute Factory.call")
+	cmd.AddCommand(newRunMachineCommand(opts))
+	cmd.AddCommand(newRunAutomationCommand(opts))
+	return cmd
+}
+
+func newRunMachineCommand(opts *rootOptions) *cobra.Command {
+	var data string
+	var agentCommand string
+	cmd := &cobra.Command{
+		Use:   "machine <name>",
+		Short: "Run a machine through serial circuit orchestration",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			input, err := parseJSONData(data)
+			if err != nil {
+				return err
+			}
+			result, err := factory.RunMachine(cmd.Context(), factory.OrchestratorOptions{
+				ProjectRoot:   opts.projectRoot,
+				WorkspaceRoot: opts.workspaceRoot,
+				Runner: factory.CodexCircuitRunner{
+					AgentCommand: splitCommand(agentCommand),
+					WorkDir:      opts.projectRoot,
+				},
+			}, args[0], input)
+			if err != nil {
+				return err
+			}
+			enc := json.NewEncoder(cmd.OutOrStdout())
+			enc.SetIndent("", "  ")
+			return enc.Encode(result)
+		},
+	}
+	cmd.Flags().StringVar(&data, "data", "{}", "JSON object passed as machine input")
+	cmd.Flags().StringVar(&agentCommand, "agent-command", "codex exec", "Agent command used to execute circuits")
+	return cmd
+}
+
+func newRunAutomationCommand(opts *rootOptions) *cobra.Command {
+	var data string
+	var agentCommand string
+	cmd := &cobra.Command{
+		Use:   "automation <name>",
+		Short: "Run an automation through serial machine orchestration",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			input, err := parseJSONData(data)
+			if err != nil {
+				return err
+			}
+			result, err := factory.RunAutomation(cmd.Context(), factory.OrchestratorOptions{
+				ProjectRoot:   opts.projectRoot,
+				WorkspaceRoot: opts.workspaceRoot,
+				Runner: factory.CodexCircuitRunner{
+					AgentCommand: splitCommand(agentCommand),
+					WorkDir:      opts.projectRoot,
+				},
+			}, args[0], input)
+			if err != nil {
+				return err
+			}
+			enc := json.NewEncoder(cmd.OutOrStdout())
+			enc.SetIndent("", "  ")
+			return enc.Encode(result)
+		},
+	}
+	cmd.Flags().StringVar(&data, "data", "{}", "JSON object passed as automation input")
+	cmd.Flags().StringVar(&agentCommand, "agent-command", "codex exec", "Agent command used to execute circuits")
 	return cmd
 }
 
@@ -226,6 +333,23 @@ func newVisualizeCommand(opts *rootOptions) *cobra.Command {
 	}
 	cmd.Flags().StringVar(&format, "format", "mermaid", "Output format: mermaid or json")
 	cmd.Flags().StringVar(&output, "output", "", "Write visualization to a file instead of stdout")
+	return cmd
+}
+
+func newGUICommand(opts *rootOptions) *cobra.Command {
+	var addr string
+	cmd := &cobra.Command{
+		Use:   "gui",
+		Short: "Serve the local Factory map GUI",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return factory.ServeGUI(factory.GUIOptions{
+				ProjectRoot:   opts.projectRoot,
+				WorkspaceRoot: opts.workspaceRoot,
+				Addr:          addr,
+			})
+		},
+	}
+	cmd.Flags().StringVar(&addr, "addr", "127.0.0.1:8765", "Address for the local GUI server")
 	return cmd
 }
 
@@ -274,6 +398,17 @@ func parseWhere(values []string) map[string]string {
 		out[strings.TrimSpace(key)] = strings.TrimSpace(val)
 	}
 	return out
+}
+
+func parseJSONData(data string) (map[string]interface{}, error) {
+	input := map[string]interface{}{}
+	if strings.TrimSpace(data) == "" {
+		return input, nil
+	}
+	if err := json.Unmarshal([]byte(data), &input); err != nil {
+		return nil, fmt.Errorf("--data must be a JSON object: %w", err)
+	}
+	return input, nil
 }
 
 func ExecuteForTest(args ...string) error {

@@ -21,6 +21,11 @@ type Config struct {
 		LogDir            string `json:"logDir"`
 		MaxAutoIterations int    `json:"maxAutoIterations"`
 	} `json:"events"`
+	Migrations struct {
+		LogPath    string `json:"logPath"`
+		BackupDir  string `json:"backupDir"`
+		StagingDir string `json:"stagingDir"`
+	} `json:"migrations"`
 	Sectors struct {
 		RootDir string `json:"rootDir"`
 	} `json:"sectors"`

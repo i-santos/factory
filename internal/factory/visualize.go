@@ -61,6 +61,16 @@ func BuildFactoryGraph(opts VisualizationOptions) (FactoryGraph, error) {
 
 	builder := graphBuilder{graph: FactoryGraph{SchemaVersion: 1, WorkspaceRoot: cfg.RootDir}}
 	builder.addWorkspaceFlow(cfg.RootDir)
+	validation, err := ValidateWorkspace(opts.ProjectRoot, opts.WorkspaceRoot)
+	if err != nil {
+		return FactoryGraph{}, err
+	}
+	if validation.Status != "valid" {
+		return FactoryGraph{}, fmt.Errorf("workspace validation failed with %d issue(s)", len(validation.Issues))
+	}
+	if err := builder.addReusablePieces(opts.ProjectRoot, cfg); err != nil {
+		return FactoryGraph{}, err
+	}
 	for _, name := range sortedCommandNames(reg.Commands) {
 		def := reg.Commands[name]
 		builder.addNode(GraphNode{
@@ -102,6 +112,72 @@ func BuildFactoryGraph(opts VisualizationOptions) (FactoryGraph, error) {
 	}
 	builder.sort()
 	return builder.graph, nil
+}
+
+func (b *graphBuilder) addReusablePieces(projectRoot string, cfg Config) error {
+	circuits, err := loadAllCircuits(projectRoot, cfg.RootDir)
+	if err != nil {
+		return err
+	}
+	for _, id := range sortedMapKeys(circuits) {
+		circuit := circuits[id]
+		b.addNode(GraphNode{
+			ID:          circuitNodeID(circuit.ID),
+			Label:       displayName(circuit.ID, circuit.Name),
+			Type:        "circuit",
+			Path:        strings.TrimPrefix(circuit.Program, "project://"),
+			Description: circuit.Description,
+		})
+		b.addEdge("shop-floor", circuitNodeID(circuit.ID), "contains", "circuit")
+	}
+
+	machines, err := loadAllMachines(projectRoot, cfg.RootDir)
+	if err != nil {
+		return err
+	}
+	for _, id := range sortedMapKeys(machines) {
+		machine := machines[id]
+		b.addNode(GraphNode{
+			ID:          machineNodeID(machine.ID),
+			Label:       displayName(machine.ID, machine.Name),
+			Type:        "machine",
+			Path:        machinePath(cfg.RootDir, id),
+			Description: machine.Description,
+		})
+		b.addEdge("shop-floor", machineNodeID(machine.ID), "contains", "machine")
+		for _, step := range machine.Circuits {
+			b.addEdge(machineNodeID(machine.ID), circuitNodeID(step.Circuit), "machine-circuit", "runs")
+		}
+	}
+
+	automations, err := loadAllAutomations(projectRoot, cfg.RootDir)
+	if err != nil {
+		return err
+	}
+	for _, id := range sortedMapKeys(automations) {
+		automation := automations[id]
+		b.addNode(GraphNode{
+			ID:          automationNodeID(automation.ID),
+			Label:       displayName(automation.ID, automation.Name),
+			Type:        "automation",
+			Path:        automationPath(cfg.RootDir, id),
+			Description: automation.Description,
+		})
+		b.addEdge("yard", automationNodeID(automation.ID), "contains", "automation")
+		for _, step := range automation.Machines {
+			b.addEdge(automationNodeID(automation.ID), machineNodeID(step.Machine), "automation-machine", "dispatches")
+		}
+	}
+	return nil
+}
+
+func sortedMapKeys[T any](values map[string]T) []string {
+	keys := make([]string, 0, len(values))
+	for key := range values {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	return keys
 }
 
 func RenderFactoryGraphMermaid(graph FactoryGraph) string {
@@ -308,6 +384,25 @@ func commandNodeID(name string) string {
 	return "cmd-" + name
 }
 
+func circuitNodeID(name string) string {
+	return "circuit-" + name
+}
+
+func machineNodeID(name string) string {
+	return "machine-" + name
+}
+
+func automationNodeID(name string) string {
+	return "automation-" + name
+}
+
+func displayName(id, name string) string {
+	if name != "" {
+		return name
+	}
+	return id
+}
+
 func sectorNodeID(name string) string {
 	return "sector-" + name
 }
@@ -329,12 +424,16 @@ func nodeTypeRank(nodeType string) int {
 	switch nodeType {
 	case "lane":
 		return 0
-	case "machine":
+	case "automation":
 		return 1
-	case "sector":
+	case "machine":
 		return 2
-	case "sector-action":
+	case "circuit":
 		return 3
+	case "sector":
+		return 4
+	case "sector-action":
+		return 5
 	default:
 		return 99
 	}

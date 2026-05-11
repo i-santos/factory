@@ -41,6 +41,20 @@ Initialize a workspace:
 go run ./cmd/factory init
 ```
 
+`factory init` scaffolds the workspace only. It does not invoke Codex or run the
+starter init automation. To execute the generated init automation explicitly:
+
+```bash
+go run ./cmd/factory run automation init
+```
+
+Update an existing workspace to the latest supported schema and record migration
+evidence:
+
+```bash
+go run ./cmd/factory update
+```
+
 Create and register a command:
 
 ```bash
@@ -75,6 +89,23 @@ go run ./cmd/factory visualize --output .factory/00-control-room/e-state/factory
 
 The visualization reads the configured workspace lanes, registered commands, event bindings, sectors, sector actions, and prompt references to sectors.
 
+Serve the local browser GUI:
+
+```bash
+go run ./cmd/factory gui
+go run ./cmd/factory gui --addr 127.0.0.1:9000
+```
+
+The GUI uses the same workspace graph as `visualize` and renders a local factory map with lanes, reusable automations, machines, circuits, sectors, relationships, and explicit CLI run-command affordances.
+
+Validate the shared CLI and GUI project model:
+
+```bash
+go run ./cmd/factory validate
+```
+
+Validation checks reusable circuits, machines, automations, sectors, and cross-references before graph-backed CLI or GUI inspection.
+
 ## Development
 
 Run tests with a writable Go cache:
@@ -89,6 +120,13 @@ Build the CLI:
 env GOCACHE=/tmp/go-build GOMODCACHE=/tmp/go-mod go build -o /tmp/factory-cli ./cmd/factory
 ```
 
-## Architecture
+## Product Triangulation
 
-See [docs/architecture.md](docs/architecture.md).
+The current product baseline is the gamified factory model:
+
+- [Triangulation](docs/triangulation.md)
+- [Roadmap](docs/roadmap.md)
+- [Use Cases](docs/use-cases.md)
+- [Architecture](docs/architecture.md)
+- [Runtime Kernel](docs/runtime-kernel.md)
+- [Project Model](docs/project-model.md)
