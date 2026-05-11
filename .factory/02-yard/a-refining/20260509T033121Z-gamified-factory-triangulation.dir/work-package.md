@@ -170,14 +170,14 @@ This is larger than one delivery unit. It changes the product model, terminology
 | WO-03 | integrated | done |
 | WO-04 | integrated | done |
 | WO-05 | integrated | done |
-| WO-06 | produced | ready for processing |
-| WO-07 | candidate | waiting-for first CLI and GUI slices |
+| WO-06 | integrated | done |
+| WO-07 | candidate | ready |
 
 ## Package Processing State
 
 Status: `blocked-or-waiting`
 
-The package has produced and integrated the triangulation baseline, runtime-kernel contract, reusable project model, first serial orchestrator slice, and new-factory initialization slice. The remaining work orders require explicit product choices before implementation continues safely.
+The package has produced and integrated the triangulation baseline, runtime-kernel contract, reusable project model, first serial orchestrator slice, new-factory initialization slice, and gamified visualization foundation. The remaining CLI/GUI alignment work is ready now that the first GUI slice exists.
 
 Product decisions now captured for WO-05:
 
@@ -187,8 +187,7 @@ Product decisions now captured for WO-05:
 
 Missing evidence before continuing:
 
-- WO-06: choose the GUI foundation stack and first playable view shape. Decision captured: zero-build local web GUI served by the Go CLI, backed by the existing graph model.
-- WO-07: wait until at least one GUI slice exists.
+- None for the next refinement cycle.
 
 ## Produced Work Orders
 
@@ -216,6 +215,9 @@ Missing evidence before continuing:
 - WO-05: New factory initialization integrated from `factory-order/20260511T131931Z-initialize-new-factories-from-init-prompt` into `factory/package/20260509T033121Z-triangulation-strategy`.
   - Merge commit: `97600334f5369d7c607190fe5db296a71db54154`
   - Release-ready evidence: `.factory/04-finished-goods/b-release-ready/20260511T133000Z-initialize-new-factories-from-init-prompt.md`
+- WO-06: Gamified visualization foundation integrated from `factory-order/20260511T140238Z-create-gamified-visualization-foundation` into `factory/package/20260509T033121Z-triangulation-strategy`.
+  - Merge commit: `a969ae7b0e83eadb72a04e41bc329269b5a5d3de`
+  - Release-ready evidence: `.factory/04-finished-goods/b-release-ready/20260511T140600Z-gamified-visualization-foundation.md`
 
 ## Completion Signal
 
