@@ -64,13 +64,20 @@ These should be handled as explicit, reviewable cleanup work rather than as inli
 
 | Work Order | Status | Readiness |
 | --- | --- | --- |
-| WO-01 | candidate | ready |
-| WO-02 | candidate | waiting-for WO-01 |
+| WO-01 | integrated | done |
+| WO-02 | candidate | ready |
 | WO-03 | candidate | ready |
 
 ## Produced Work Orders
 
 - WO-01: `.factory/03-shop-floor/a-input-buffer/20260511T145301Z-reconcile-completed-factory-lanes.dir/work-order.md`
+
+## Integrated Work Orders
+
+- WO-01: Reconciled completed package and work-order lane placement.
+  - Release-ready evidence: `.factory/04-finished-goods/b-release-ready/20260511T145600Z-reconcile-completed-factory-lanes.md`
+  - Moved completed gamified Factory package to `.factory/02-yard/b-discharged/20260509T033121Z-gamified-factory-triangulation.dir/`.
+  - Moved integrated source work orders to `.factory/04-finished-goods/d-archived/input-buffer-work-orders/`.
 
 ## Completion Signal
 
