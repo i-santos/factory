@@ -10,7 +10,7 @@ Rebuilt the derived Factory index projection after lane reconciliation.
 
 ## Index Result
 
-- Status: fresh
+- Index status: fresh
 - Record count: 25
 - Warning count: 0
 - Generated at: 2026-05-11T14:58:42.853Z

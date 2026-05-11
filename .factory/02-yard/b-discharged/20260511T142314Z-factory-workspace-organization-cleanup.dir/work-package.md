@@ -1,5 +1,9 @@
 # Factory Workspace Organization Cleanup
 
+## Status
+
+release-ready
+
 ## Source
 
 Created by `factory organize` from audit report:
@@ -88,6 +92,12 @@ These should be handled as explicit, reviewable cleanup work rather than as inli
 - WO-03: Archived superseded configurable-agent pivot package.
   - Release-ready evidence: `.factory/04-finished-goods/b-release-ready/20260511T150200Z-dispose-superseded-agent-pivot-package.md`
   - Archived path: `.factory/02-yard/c-archived/20260428T012116Z-configurable-agent-factory-pivot.dir/work-package.md`
+
+## Package Release
+
+- Package branch: `factory/package/20260509T033121Z-triangulation-strategy`
+- Package release-ready evidence: `.factory/04-finished-goods/b-release-ready/20260511T150600Z-factory-workspace-organization-cleanup-package.md`
+- Completed at: `20260511T150600Z`
 
 ## Completion Signal
 
