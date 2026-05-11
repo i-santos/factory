@@ -169,19 +169,24 @@ This is larger than one delivery unit. It changes the product model, terminology
 | WO-02 | integrated | done |
 | WO-03 | integrated | done |
 | WO-04 | integrated | done |
-| WO-05 | candidate | ready |
+| WO-05 | produced | ready for processing |
 | WO-06 | candidate | ready for design baseline |
 | WO-07 | candidate | waiting-for first CLI and GUI slices |
 
 ## Package Processing State
 
-Status: `blocked-or-waiting`
+Status: `work-order-produced`
 
-The package has produced and integrated the triangulation baseline, runtime-kernel contract, reusable project model, and first serial orchestrator slice. The remaining work orders require explicit product choices before implementation continues safely.
+The package has produced and integrated the triangulation baseline, runtime-kernel contract, reusable project model, and first serial orchestrator slice. WO-05 is now produced after the operator clarified the new-factory initialization behavior.
+
+Product decisions now captured for WO-05:
+
+- `factory init` scaffolds by default and must not execute Codex automatically.
+- Explicit execution should happen through a run path such as `factory run automation init`, or through an explicit flag such as `factory init --run` if the scaffold-only path remains the default.
+- Workspace update planning should be included from the beginning: keep one canonical active `.factory/` root, persist schema/runtime metadata, and use idempotent migrations with migration evidence/backups rather than permanent active `.factory/v2`, `.factory/v3`, or similar roots.
 
 Missing evidence before continuing:
 
-- WO-05: clarify the exact new-factory init-prompt behavior, including whether `factory init` should execute Codex immediately or only scaffold an init circuit/automation.
 - WO-06: choose the GUI foundation stack and first playable view shape.
 - WO-07: wait until at least one GUI slice exists.
 
@@ -191,6 +196,7 @@ Missing evidence before continuing:
 - WO-02: `.factory/03-shop-floor/a-input-buffer/20260509T035600Z-define-circuit-runtime-kernel-contract.dir/work-order.md`
 - WO-03: `.factory/03-shop-floor/a-input-buffer/20260509T035806Z-model-reusable-factory-pieces.dir/work-order.md`
 - WO-04: `.factory/03-shop-floor/a-input-buffer/20260509T040012Z-build-serial-machine-orchestrator.dir/work-order.md`
+- WO-05: `.factory/03-shop-floor/a-input-buffer/20260511T131931Z-initialize-new-factories-from-init-prompt.dir/work-order.md`
 
 ## Integrated Work Orders
 
