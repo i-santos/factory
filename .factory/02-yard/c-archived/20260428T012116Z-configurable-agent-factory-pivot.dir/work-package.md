@@ -1,5 +1,15 @@
 # Configurable Agent Factory Pivot
 
+## Disposition
+
+Status: `superseded-archived`
+
+This package is superseded by the gamified Factory triangulation package completed on 2026-05-11:
+
+`.factory/04-finished-goods/b-release-ready/20260511T141300Z-gamified-factory-triangulation-package.md`
+
+The record is preserved for historical context. It should not be processed as active work unless a future operator explicitly reopens selected ideas under the current gamified Factory product model.
+
 ## Source Intake
 
 Operator request received on 2026-04-28:

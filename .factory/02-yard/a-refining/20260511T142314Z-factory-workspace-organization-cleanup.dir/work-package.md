@@ -66,7 +66,7 @@ These should be handled as explicit, reviewable cleanup work rather than as inli
 | --- | --- | --- |
 | WO-01 | integrated | done |
 | WO-02 | integrated | done |
-| WO-03 | produced | ready for processing |
+| WO-03 | integrated | done |
 
 ## Produced Work Orders
 
@@ -85,6 +85,9 @@ These should be handled as explicit, reviewable cleanup work rather than as inli
   - Index status: fresh.
   - Record count: 25.
   - Warning count: 0.
+- WO-03: Archived superseded configurable-agent pivot package.
+  - Release-ready evidence: `.factory/04-finished-goods/b-release-ready/20260511T150200Z-dispose-superseded-agent-pivot-package.md`
+  - Archived path: `.factory/02-yard/c-archived/20260428T012116Z-configurable-agent-factory-pivot.dir/work-package.md`
 
 ## Completion Signal
 
