@@ -170,7 +170,7 @@ This is larger than one delivery unit. It changes the product model, terminology
 | WO-03 | integrated | done |
 | WO-04 | integrated | done |
 | WO-05 | integrated | done |
-| WO-06 | candidate | ready for design baseline |
+| WO-06 | produced | ready for processing |
 | WO-07 | candidate | waiting-for first CLI and GUI slices |
 
 ## Package Processing State
@@ -187,7 +187,7 @@ Product decisions now captured for WO-05:
 
 Missing evidence before continuing:
 
-- WO-06: choose the GUI foundation stack and first playable view shape.
+- WO-06: choose the GUI foundation stack and first playable view shape. Decision captured: zero-build local web GUI served by the Go CLI, backed by the existing graph model.
 - WO-07: wait until at least one GUI slice exists.
 
 ## Produced Work Orders
@@ -197,6 +197,7 @@ Missing evidence before continuing:
 - WO-03: `.factory/03-shop-floor/a-input-buffer/20260509T035806Z-model-reusable-factory-pieces.dir/work-order.md`
 - WO-04: `.factory/03-shop-floor/a-input-buffer/20260509T040012Z-build-serial-machine-orchestrator.dir/work-order.md`
 - WO-05: `.factory/03-shop-floor/a-input-buffer/20260511T131931Z-initialize-new-factories-from-init-prompt.dir/work-order.md`
+- WO-06: `.factory/03-shop-floor/a-input-buffer/20260511T140238Z-create-gamified-visualization-foundation.dir/work-order.md`
 
 ## Integrated Work Orders
 
