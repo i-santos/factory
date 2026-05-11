@@ -26,11 +26,26 @@ func NewRootCommand() *cobra.Command {
 	cmd.PersistentFlags().StringVar(&opts.projectRoot, "project-root", ".", "Project root containing the factory workspace")
 	cmd.PersistentFlags().StringVar(&opts.workspaceRoot, "workspace-root", factory.DefaultWorkspaceRoot, "Factory workspace root")
 	cmd.AddCommand(newInitCommand(opts))
+	cmd.AddCommand(newUpdateCommand(opts))
 	cmd.AddCommand(newCommandCommand(opts))
 	cmd.AddCommand(newEventCommand(opts))
 	cmd.AddCommand(newRunCommand(opts))
 	cmd.AddCommand(newVisualizeCommand(opts))
 	return cmd
+}
+
+func newUpdateCommand(opts *rootOptions) *cobra.Command {
+	return &cobra.Command{
+		Use:   "update",
+		Short: "Update a project-local factory workspace",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := factory.UpdateWorkspace(opts.projectRoot, opts.workspaceRoot); err != nil {
+				return err
+			}
+			fmt.Fprintf(cmd.OutOrStdout(), "updated %s\n", opts.workspaceRoot)
+			return nil
+		},
+	}
 }
 
 func newInitCommand(opts *rootOptions) *cobra.Command {
