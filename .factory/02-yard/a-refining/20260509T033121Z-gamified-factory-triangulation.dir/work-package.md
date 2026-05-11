@@ -171,7 +171,7 @@ This is larger than one delivery unit. It changes the product model, terminology
 | WO-04 | integrated | done |
 | WO-05 | integrated | done |
 | WO-06 | integrated | done |
-| WO-07 | candidate | ready |
+| WO-07 | produced | ready for processing |
 
 ## Package Processing State
 
@@ -197,6 +197,7 @@ Missing evidence before continuing:
 - WO-04: `.factory/03-shop-floor/a-input-buffer/20260509T040012Z-build-serial-machine-orchestrator.dir/work-order.md`
 - WO-05: `.factory/03-shop-floor/a-input-buffer/20260511T131931Z-initialize-new-factories-from-init-prompt.dir/work-order.md`
 - WO-06: `.factory/03-shop-floor/a-input-buffer/20260511T140238Z-create-gamified-visualization-foundation.dir/work-order.md`
+- WO-07: `.factory/03-shop-floor/a-input-buffer/20260511T140842Z-align-cli-and-gui-project-model.dir/work-order.md`
 
 ## Integrated Work Orders
 
