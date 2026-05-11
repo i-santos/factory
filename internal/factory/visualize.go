@@ -61,6 +61,9 @@ func BuildFactoryGraph(opts VisualizationOptions) (FactoryGraph, error) {
 
 	builder := graphBuilder{graph: FactoryGraph{SchemaVersion: 1, WorkspaceRoot: cfg.RootDir}}
 	builder.addWorkspaceFlow(cfg.RootDir)
+	if err := builder.addReusablePieces(opts.ProjectRoot, cfg); err != nil {
+		return FactoryGraph{}, err
+	}
 	for _, name := range sortedCommandNames(reg.Commands) {
 		def := reg.Commands[name]
 		builder.addNode(GraphNode{
@@ -102,6 +105,89 @@ func BuildFactoryGraph(opts VisualizationOptions) (FactoryGraph, error) {
 	}
 	builder.sort()
 	return builder.graph, nil
+}
+
+func (b *graphBuilder) addReusablePieces(projectRoot string, cfg Config) error {
+	circuitsRoot := filepath.Join(projectRoot, cfg.RootDir, "circuits")
+	circuitEntries, err := os.ReadDir(circuitsRoot)
+	if err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	for _, entry := range circuitEntries {
+		if !entry.IsDir() {
+			continue
+		}
+		circuit, err := LoadCircuit(projectRoot, cfg.RootDir, entry.Name())
+		if err != nil {
+			if os.IsNotExist(err) {
+				continue
+			}
+			return err
+		}
+		b.addNode(GraphNode{
+			ID:          circuitNodeID(circuit.ID),
+			Label:       displayName(circuit.ID, circuit.Name),
+			Type:        "circuit",
+			Path:        strings.TrimPrefix(circuit.Program, "project://"),
+			Description: circuit.Description,
+		})
+		b.addEdge("shop-floor", circuitNodeID(circuit.ID), "contains", "circuit")
+	}
+
+	machinesRoot := filepath.Join(projectRoot, cfg.RootDir, "machines")
+	machineEntries, err := os.ReadDir(machinesRoot)
+	if err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	for _, entry := range machineEntries {
+		if entry.IsDir() || filepath.Ext(entry.Name()) != ".json" {
+			continue
+		}
+		id := strings.TrimSuffix(entry.Name(), filepath.Ext(entry.Name()))
+		machine, err := LoadMachine(projectRoot, cfg.RootDir, id)
+		if err != nil {
+			return err
+		}
+		b.addNode(GraphNode{
+			ID:          machineNodeID(machine.ID),
+			Label:       displayName(machine.ID, machine.Name),
+			Type:        "machine",
+			Path:        filepath.ToSlash(filepath.Join(cfg.RootDir, "machines", entry.Name())),
+			Description: machine.Description,
+		})
+		b.addEdge("shop-floor", machineNodeID(machine.ID), "contains", "machine")
+		for _, step := range machine.Circuits {
+			b.addEdge(machineNodeID(machine.ID), circuitNodeID(step.Circuit), "machine-circuit", "runs")
+		}
+	}
+
+	automationsRoot := filepath.Join(projectRoot, cfg.RootDir, "automations")
+	automationEntries, err := os.ReadDir(automationsRoot)
+	if err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	for _, entry := range automationEntries {
+		if entry.IsDir() || filepath.Ext(entry.Name()) != ".json" {
+			continue
+		}
+		id := strings.TrimSuffix(entry.Name(), filepath.Ext(entry.Name()))
+		automation, err := LoadAutomation(projectRoot, cfg.RootDir, id)
+		if err != nil {
+			return err
+		}
+		b.addNode(GraphNode{
+			ID:          automationNodeID(automation.ID),
+			Label:       displayName(automation.ID, automation.Name),
+			Type:        "automation",
+			Path:        filepath.ToSlash(filepath.Join(cfg.RootDir, "automations", entry.Name())),
+			Description: automation.Description,
+		})
+		b.addEdge("yard", automationNodeID(automation.ID), "contains", "automation")
+		for _, step := range automation.Machines {
+			b.addEdge(automationNodeID(automation.ID), machineNodeID(step.Machine), "automation-machine", "dispatches")
+		}
+	}
+	return nil
 }
 
 func RenderFactoryGraphMermaid(graph FactoryGraph) string {
@@ -308,6 +394,25 @@ func commandNodeID(name string) string {
 	return "cmd-" + name
 }
 
+func circuitNodeID(name string) string {
+	return "circuit-" + name
+}
+
+func machineNodeID(name string) string {
+	return "machine-" + name
+}
+
+func automationNodeID(name string) string {
+	return "automation-" + name
+}
+
+func displayName(id, name string) string {
+	if name != "" {
+		return name
+	}
+	return id
+}
+
 func sectorNodeID(name string) string {
 	return "sector-" + name
 }
@@ -329,12 +434,16 @@ func nodeTypeRank(nodeType string) int {
 	switch nodeType {
 	case "lane":
 		return 0
-	case "machine":
+	case "automation":
 		return 1
-	case "sector":
+	case "machine":
 		return 2
-	case "sector-action":
+	case "circuit":
 		return 3
+	case "sector":
+		return 4
+	case "sector-action":
+		return 5
 	default:
 		return 99
 	}

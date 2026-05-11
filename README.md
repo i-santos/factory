@@ -89,6 +89,15 @@ go run ./cmd/factory visualize --output .factory/00-control-room/e-state/factory
 
 The visualization reads the configured workspace lanes, registered commands, event bindings, sectors, sector actions, and prompt references to sectors.
 
+Serve the local browser GUI:
+
+```bash
+go run ./cmd/factory gui
+go run ./cmd/factory gui --addr 127.0.0.1:9000
+```
+
+The GUI uses the same workspace graph as `visualize` and renders a local factory map with lanes, reusable automations, machines, circuits, sectors, relationships, and explicit CLI run-command affordances.
+
 ## Development
 
 Run tests with a writable Go cache:

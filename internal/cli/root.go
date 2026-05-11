@@ -31,6 +31,7 @@ func NewRootCommand() *cobra.Command {
 	cmd.AddCommand(newEventCommand(opts))
 	cmd.AddCommand(newRunCommand(opts))
 	cmd.AddCommand(newVisualizeCommand(opts))
+	cmd.AddCommand(newGUICommand(opts))
 	return cmd
 }
 
@@ -309,6 +310,23 @@ func newVisualizeCommand(opts *rootOptions) *cobra.Command {
 	}
 	cmd.Flags().StringVar(&format, "format", "mermaid", "Output format: mermaid or json")
 	cmd.Flags().StringVar(&output, "output", "", "Write visualization to a file instead of stdout")
+	return cmd
+}
+
+func newGUICommand(opts *rootOptions) *cobra.Command {
+	var addr string
+	cmd := &cobra.Command{
+		Use:   "gui",
+		Short: "Serve the local Factory map GUI",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return factory.ServeGUI(factory.GUIOptions{
+				ProjectRoot:   opts.projectRoot,
+				WorkspaceRoot: opts.workspaceRoot,
+				Addr:          addr,
+			})
+		},
+	}
+	cmd.Flags().StringVar(&addr, "addr", "127.0.0.1:8765", "Address for the local GUI server")
 	return cmd
 }
 

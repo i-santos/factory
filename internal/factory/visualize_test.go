@@ -41,14 +41,43 @@ func TestBuildFactoryGraphIncludesWorkspaceCommandsBindingsAndSectors(t *testing
 		t.Fatal(err)
 	}
 	assertNode(t, graph, "dock", "lane")
+	assertNode(t, graph, "automation-init", "automation")
+	assertNode(t, graph, "machine-init", "machine")
+	assertNode(t, graph, "circuit-init", "circuit")
 	assertNode(t, graph, "cmd-load-intake", "machine")
 	assertNode(t, graph, "cmd-drain-work-package", "machine")
 	assertNode(t, graph, "sector-product", "sector")
 	assertNode(t, graph, "sector-product-action-refine-experience", "sector-action")
 	assertEdge(t, graph, "dock", "yard", "workspace-flow")
+	assertEdge(t, graph, "automation-init", "machine-init", "automation-machine")
+	assertEdge(t, graph, "machine-init", "circuit-init", "machine-circuit")
 	assertEdge(t, graph, "cmd-load-intake", "cmd-drain-work-package", "event-binding")
 	assertEdge(t, graph, "cmd-load-intake", "sector-product", "sector-reference")
 	assertEdge(t, graph, "cmd-load-intake", "sector-product-action-refine-experience", "sector-action-reference")
+}
+
+func TestRenderFactoryGraphHTMLIncludesMapAndRunAffordances(t *testing.T) {
+	root := t.TempDir()
+	if err := InitWorkspace(root, DefaultWorkspaceRoot); err != nil {
+		t.Fatal(err)
+	}
+	graph, err := BuildFactoryGraph(VisualizationOptions{ProjectRoot: root, WorkspaceRoot: DefaultWorkspaceRoot})
+	if err != nil {
+		t.Fatal(err)
+	}
+	rendered, err := RenderFactoryGraphHTML(graph)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(rendered, "Factory Map") {
+		t.Fatalf("expected GUI title, got:\n%s", rendered)
+	}
+	if !strings.Contains(rendered, "factory run automation ") {
+		t.Fatalf("expected automation run affordance, got:\n%s", rendered)
+	}
+	if !strings.Contains(rendered, "oklch(") {
+		t.Fatalf("expected OKLCH design tokens, got:\n%s", rendered)
+	}
 }
 
 func TestRenderFactoryGraphMermaid(t *testing.T) {
