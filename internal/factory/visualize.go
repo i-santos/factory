@@ -61,6 +61,13 @@ func BuildFactoryGraph(opts VisualizationOptions) (FactoryGraph, error) {
 
 	builder := graphBuilder{graph: FactoryGraph{SchemaVersion: 1, WorkspaceRoot: cfg.RootDir}}
 	builder.addWorkspaceFlow(cfg.RootDir)
+	validation, err := ValidateWorkspace(opts.ProjectRoot, opts.WorkspaceRoot)
+	if err != nil {
+		return FactoryGraph{}, err
+	}
+	if validation.Status != "valid" {
+		return FactoryGraph{}, fmt.Errorf("workspace validation failed with %d issue(s)", len(validation.Issues))
+	}
 	if err := builder.addReusablePieces(opts.ProjectRoot, cfg); err != nil {
 		return FactoryGraph{}, err
 	}
@@ -108,22 +115,12 @@ func BuildFactoryGraph(opts VisualizationOptions) (FactoryGraph, error) {
 }
 
 func (b *graphBuilder) addReusablePieces(projectRoot string, cfg Config) error {
-	circuitsRoot := filepath.Join(projectRoot, cfg.RootDir, "circuits")
-	circuitEntries, err := os.ReadDir(circuitsRoot)
-	if err != nil && !os.IsNotExist(err) {
+	circuits, err := loadAllCircuits(projectRoot, cfg.RootDir)
+	if err != nil {
 		return err
 	}
-	for _, entry := range circuitEntries {
-		if !entry.IsDir() {
-			continue
-		}
-		circuit, err := LoadCircuit(projectRoot, cfg.RootDir, entry.Name())
-		if err != nil {
-			if os.IsNotExist(err) {
-				continue
-			}
-			return err
-		}
+	for _, id := range sortedMapKeys(circuits) {
+		circuit := circuits[id]
 		b.addNode(GraphNode{
 			ID:          circuitNodeID(circuit.ID),
 			Label:       displayName(circuit.ID, circuit.Name),
@@ -134,25 +131,17 @@ func (b *graphBuilder) addReusablePieces(projectRoot string, cfg Config) error {
 		b.addEdge("shop-floor", circuitNodeID(circuit.ID), "contains", "circuit")
 	}
 
-	machinesRoot := filepath.Join(projectRoot, cfg.RootDir, "machines")
-	machineEntries, err := os.ReadDir(machinesRoot)
-	if err != nil && !os.IsNotExist(err) {
+	machines, err := loadAllMachines(projectRoot, cfg.RootDir)
+	if err != nil {
 		return err
 	}
-	for _, entry := range machineEntries {
-		if entry.IsDir() || filepath.Ext(entry.Name()) != ".json" {
-			continue
-		}
-		id := strings.TrimSuffix(entry.Name(), filepath.Ext(entry.Name()))
-		machine, err := LoadMachine(projectRoot, cfg.RootDir, id)
-		if err != nil {
-			return err
-		}
+	for _, id := range sortedMapKeys(machines) {
+		machine := machines[id]
 		b.addNode(GraphNode{
 			ID:          machineNodeID(machine.ID),
 			Label:       displayName(machine.ID, machine.Name),
 			Type:        "machine",
-			Path:        filepath.ToSlash(filepath.Join(cfg.RootDir, "machines", entry.Name())),
+			Path:        machinePath(cfg.RootDir, id),
 			Description: machine.Description,
 		})
 		b.addEdge("shop-floor", machineNodeID(machine.ID), "contains", "machine")
@@ -161,25 +150,17 @@ func (b *graphBuilder) addReusablePieces(projectRoot string, cfg Config) error {
 		}
 	}
 
-	automationsRoot := filepath.Join(projectRoot, cfg.RootDir, "automations")
-	automationEntries, err := os.ReadDir(automationsRoot)
-	if err != nil && !os.IsNotExist(err) {
+	automations, err := loadAllAutomations(projectRoot, cfg.RootDir)
+	if err != nil {
 		return err
 	}
-	for _, entry := range automationEntries {
-		if entry.IsDir() || filepath.Ext(entry.Name()) != ".json" {
-			continue
-		}
-		id := strings.TrimSuffix(entry.Name(), filepath.Ext(entry.Name()))
-		automation, err := LoadAutomation(projectRoot, cfg.RootDir, id)
-		if err != nil {
-			return err
-		}
+	for _, id := range sortedMapKeys(automations) {
+		automation := automations[id]
 		b.addNode(GraphNode{
 			ID:          automationNodeID(automation.ID),
 			Label:       displayName(automation.ID, automation.Name),
 			Type:        "automation",
-			Path:        filepath.ToSlash(filepath.Join(cfg.RootDir, "automations", entry.Name())),
+			Path:        automationPath(cfg.RootDir, id),
 			Description: automation.Description,
 		})
 		b.addEdge("yard", automationNodeID(automation.ID), "contains", "automation")
@@ -188,6 +169,15 @@ func (b *graphBuilder) addReusablePieces(projectRoot string, cfg Config) error {
 		}
 	}
 	return nil
+}
+
+func sortedMapKeys[T any](values map[string]T) []string {
+	keys := make([]string, 0, len(values))
+	for key := range values {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	return keys
 }
 
 func RenderFactoryGraphMermaid(graph FactoryGraph) string {
