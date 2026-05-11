@@ -171,13 +171,13 @@ This is larger than one delivery unit. It changes the product model, terminology
 | WO-04 | integrated | done |
 | WO-05 | integrated | done |
 | WO-06 | integrated | done |
-| WO-07 | produced | ready for processing |
+| WO-07 | integrated | done |
 
 ## Package Processing State
 
-Status: `blocked-or-waiting`
+Status: `release-ready`
 
-The package has produced and integrated the triangulation baseline, runtime-kernel contract, reusable project model, first serial orchestrator slice, new-factory initialization slice, and gamified visualization foundation. The remaining CLI/GUI alignment work is ready now that the first GUI slice exists.
+The package has produced and integrated the triangulation baseline, runtime-kernel contract, reusable project model, first serial orchestrator slice, new-factory initialization slice, gamified visualization foundation, and CLI/GUI project-model alignment.
 
 Product decisions now captured for WO-05:
 
@@ -219,6 +219,15 @@ Missing evidence before continuing:
 - WO-06: Gamified visualization foundation integrated from `factory-order/20260511T140238Z-create-gamified-visualization-foundation` into `factory/package/20260509T033121Z-triangulation-strategy`.
   - Merge commit: `a969ae7b0e83eadb72a04e41bc329269b5a5d3de`
   - Release-ready evidence: `.factory/04-finished-goods/b-release-ready/20260511T140600Z-gamified-visualization-foundation.md`
+- WO-07: CLI and GUI project model alignment integrated from `factory-order/20260511T140842Z-align-cli-and-gui-project-model` into `factory/package/20260509T033121Z-triangulation-strategy`.
+  - Merge commit: `a4c521be7c8d5604348f39678bb98e43483821ff`
+  - Release-ready evidence: `.factory/04-finished-goods/b-release-ready/20260511T141100Z-cli-gui-project-model-alignment.md`
+
+## Package Release
+
+- Package branch: `factory/package/20260509T033121Z-triangulation-strategy`
+- Package release-ready evidence: `.factory/04-finished-goods/b-release-ready/20260511T141300Z-gamified-factory-triangulation-package.md`
+- Completed at: `20260511T141300Z`
 
 ## Completion Signal
 
