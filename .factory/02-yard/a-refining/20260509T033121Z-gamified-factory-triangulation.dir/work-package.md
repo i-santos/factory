@@ -169,15 +169,15 @@ This is larger than one delivery unit. It changes the product model, terminology
 | WO-02 | integrated | done |
 | WO-03 | integrated | done |
 | WO-04 | integrated | done |
-| WO-05 | produced | ready for processing |
+| WO-05 | integrated | done |
 | WO-06 | candidate | ready for design baseline |
 | WO-07 | candidate | waiting-for first CLI and GUI slices |
 
 ## Package Processing State
 
-Status: `work-order-produced`
+Status: `blocked-or-waiting`
 
-The package has produced and integrated the triangulation baseline, runtime-kernel contract, reusable project model, and first serial orchestrator slice. WO-05 is now produced after the operator clarified the new-factory initialization behavior.
+The package has produced and integrated the triangulation baseline, runtime-kernel contract, reusable project model, first serial orchestrator slice, and new-factory initialization slice. The remaining work orders require explicit product choices before implementation continues safely.
 
 Product decisions now captured for WO-05:
 
@@ -212,6 +212,9 @@ Missing evidence before continuing:
 - WO-04: Serial machine orchestrator integrated from `factory/order/20260509T040012Z-build-serial-machine-orchestrator` into `factory/package/20260509T033121Z-triangulation-strategy`.
   - Merge commit: `a7bd0e8d40cbc73ad403ec020ec56424fd9d7237`
   - Release-ready evidence: `.factory/04-finished-goods/b-release-ready/20260509T040500Z-serial-machine-orchestrator.md`
+- WO-05: New factory initialization integrated from `factory-order/20260511T131931Z-initialize-new-factories-from-init-prompt` into `factory/package/20260509T033121Z-triangulation-strategy`.
+  - Merge commit: `97600334f5369d7c607190fe5db296a71db54154`
+  - Release-ready evidence: `.factory/04-finished-goods/b-release-ready/20260511T133000Z-initialize-new-factories-from-init-prompt.md`
 
 ## Completion Signal
 
