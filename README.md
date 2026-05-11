@@ -98,6 +98,14 @@ go run ./cmd/factory gui --addr 127.0.0.1:9000
 
 The GUI uses the same workspace graph as `visualize` and renders a local factory map with lanes, reusable automations, machines, circuits, sectors, relationships, and explicit CLI run-command affordances.
 
+Validate the shared CLI and GUI project model:
+
+```bash
+go run ./cmd/factory validate
+```
+
+Validation checks reusable circuits, machines, automations, sectors, and cross-references before graph-backed CLI or GUI inspection.
+
 ## Development
 
 Run tests with a writable Go cache:

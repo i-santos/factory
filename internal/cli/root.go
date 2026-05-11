@@ -27,12 +27,35 @@ func NewRootCommand() *cobra.Command {
 	cmd.PersistentFlags().StringVar(&opts.workspaceRoot, "workspace-root", factory.DefaultWorkspaceRoot, "Factory workspace root")
 	cmd.AddCommand(newInitCommand(opts))
 	cmd.AddCommand(newUpdateCommand(opts))
+	cmd.AddCommand(newValidateCommand(opts))
 	cmd.AddCommand(newCommandCommand(opts))
 	cmd.AddCommand(newEventCommand(opts))
 	cmd.AddCommand(newRunCommand(opts))
 	cmd.AddCommand(newVisualizeCommand(opts))
 	cmd.AddCommand(newGUICommand(opts))
 	return cmd
+}
+
+func newValidateCommand(opts *rootOptions) *cobra.Command {
+	return &cobra.Command{
+		Use:   "validate",
+		Short: "Validate the shared factory project model",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			result, err := factory.ValidateWorkspace(opts.projectRoot, opts.workspaceRoot)
+			if err != nil {
+				return err
+			}
+			enc := json.NewEncoder(cmd.OutOrStdout())
+			enc.SetIndent("", "  ")
+			if err := enc.Encode(result); err != nil {
+				return err
+			}
+			if result.Status != "valid" {
+				return fmt.Errorf("factory workspace is invalid")
+			}
+			return nil
+		},
+	}
 }
 
 func newUpdateCommand(opts *rootOptions) *cobra.Command {
