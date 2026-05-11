@@ -66,12 +66,13 @@ These should be handled as explicit, reviewable cleanup work rather than as inli
 | --- | --- | --- |
 | WO-01 | integrated | done |
 | WO-02 | integrated | done |
-| WO-03 | candidate | ready |
+| WO-03 | produced | ready for processing |
 
 ## Produced Work Orders
 
 - WO-01: `.factory/03-shop-floor/a-input-buffer/20260511T145301Z-reconcile-completed-factory-lanes.dir/work-order.md`
 - WO-02: `.factory/03-shop-floor/a-input-buffer/20260511T145712Z-refresh-factory-derived-index.dir/work-order.md`
+- WO-03: `.factory/03-shop-floor/a-input-buffer/20260511T145951Z-dispose-superseded-agent-pivot-package.dir/work-order.md`
 
 ## Integrated Work Orders
 
