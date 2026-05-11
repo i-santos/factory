@@ -68,6 +68,10 @@ These should be handled as explicit, reviewable cleanup work rather than as inli
 | WO-02 | candidate | waiting-for WO-01 |
 | WO-03 | candidate | ready |
 
+## Produced Work Orders
+
+- WO-01: `.factory/03-shop-floor/a-input-buffer/20260511T145301Z-reconcile-completed-factory-lanes.dir/work-order.md`
+
 ## Completion Signal
 
 - Active Factory lanes no longer show completed package work as pending.
