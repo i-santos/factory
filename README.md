@@ -41,6 +41,20 @@ Initialize a workspace:
 go run ./cmd/factory init
 ```
 
+`factory init` scaffolds the workspace only. It does not invoke Codex or run the
+starter init automation. To execute the generated init automation explicitly:
+
+```bash
+go run ./cmd/factory run automation init
+```
+
+Update an existing workspace to the latest supported schema and record migration
+evidence:
+
+```bash
+go run ./cmd/factory update
+```
+
 Create and register a command:
 
 ```bash
