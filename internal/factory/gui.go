@@ -2,10 +2,13 @@ package factory
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"html/template"
 	"net"
 	"net/http"
+	"os"
+	"strconv"
 	"strings"
 )
 
@@ -71,7 +74,194 @@ func NewGUIHandler(opts GUIOptions) http.Handler {
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(runs)
 	})
+	mux.HandleFunc("/api/builder", builderCollectionHandler(opts))
+	mux.HandleFunc("/api/builder/", builderPrimitiveHandler(opts))
 	return mux
+}
+
+func builderCollectionHandler(opts GUIOptions) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/builder" {
+			http.NotFound(w, r)
+			return
+		}
+		if r.Method != http.MethodGet {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		inventory, err := ListBuilderInventory(BuilderOptions{ProjectRoot: opts.ProjectRoot, WorkspaceRoot: opts.WorkspaceRoot})
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		writeJSONResponse(w, http.StatusOK, inventory)
+	}
+}
+
+func builderPrimitiveHandler(opts GUIOptions) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		path := strings.TrimPrefix(r.URL.Path, "/api/builder/")
+		parts := strings.Split(strings.Trim(path, "/"), "/")
+		if len(parts) == 0 || parts[0] == "" {
+			http.NotFound(w, r)
+			return
+		}
+		kind := parts[0]
+		id := ""
+		if len(parts) > 1 {
+			id = parts[1]
+		}
+		builderOpts := BuilderOptions{ProjectRoot: opts.ProjectRoot, WorkspaceRoot: opts.WorkspaceRoot}
+		switch r.Method {
+		case http.MethodGet:
+			handleBuilderGet(w, builderOpts, kind, id)
+		case http.MethodPost:
+			if id != "" {
+				http.Error(w, "POST targets a primitive collection", http.StatusBadRequest)
+				return
+			}
+			handleBuilderWrite(w, r, builderOpts, kind, "", false)
+		case http.MethodPut:
+			if id == "" {
+				http.Error(w, "PUT requires a primitive id", http.StatusBadRequest)
+				return
+			}
+			handleBuilderWrite(w, r, builderOpts, kind, id, true)
+		default:
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		}
+	}
+}
+
+func handleBuilderGet(w http.ResponseWriter, opts BuilderOptions, kind, id string) {
+	inventory, err := ListBuilderInventory(opts)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if id == "" {
+		switch kind {
+		case "circuits":
+			writeJSONResponse(w, http.StatusOK, inventory.Circuits)
+		case "machines":
+			writeJSONResponse(w, http.StatusOK, inventory.Machines)
+		case "automations":
+			writeJSONResponse(w, http.StatusOK, inventory.Automations)
+		case "commands":
+			writeJSONResponse(w, http.StatusOK, inventory.Commands)
+		case "bindings":
+			writeJSONResponse(w, http.StatusOK, inventory.Bindings)
+		default:
+			http.Error(w, "unsupported builder primitive", http.StatusNotFound)
+		}
+		return
+	}
+	if kind == "bindings" {
+		index, err := strconv.Atoi(id)
+		if err != nil || index < 0 || index >= len(inventory.Bindings) {
+			http.Error(w, "binding not found", http.StatusNotFound)
+			return
+		}
+		writeJSONResponse(w, http.StatusOK, inventory.Bindings[index])
+		return
+	}
+	value, err := ReadBuilderPrimitive(opts, kind, id)
+	if errors.Is(err, os.ErrNotExist) {
+		http.Error(w, "primitive not found", http.StatusNotFound)
+		return
+	}
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	writeJSONResponse(w, http.StatusOK, value)
+}
+
+func handleBuilderWrite(w http.ResponseWriter, r *http.Request, opts BuilderOptions, kind, id string, update bool) {
+	switch kind {
+	case "circuits":
+		var input BuilderCircuitInput
+		if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+			http.Error(w, "invalid circuit JSON", http.StatusBadRequest)
+			return
+		}
+		if update {
+			input.ID = id
+		}
+		value, err := CreateOrUpdateCircuit(opts, input)
+		writeBuilderResult(w, value, err)
+	case "machines":
+		var input MachineDefinition
+		if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+			http.Error(w, "invalid machine JSON", http.StatusBadRequest)
+			return
+		}
+		if update {
+			input.ID = id
+		}
+		value, err := CreateOrUpdateMachine(opts, input)
+		writeBuilderResult(w, value, err)
+	case "automations":
+		var input AutomationDefinition
+		if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+			http.Error(w, "invalid automation JSON", http.StatusBadRequest)
+			return
+		}
+		if update {
+			input.ID = id
+		}
+		value, err := CreateOrUpdateAutomation(opts, input)
+		writeBuilderResult(w, value, err)
+	case "commands":
+		var input BuilderCommandInput
+		if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+			http.Error(w, "invalid command JSON", http.StatusBadRequest)
+			return
+		}
+		if update {
+			input.Name = id
+		}
+		value, err := CreateOrUpdateCommand(opts, input)
+		writeBuilderResult(w, value, err)
+	case "bindings":
+		var input EventBinding
+		if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+			http.Error(w, "invalid binding JSON", http.StatusBadRequest)
+			return
+		}
+		if update {
+			index, err := strconv.Atoi(id)
+			if err != nil {
+				http.Error(w, "binding id must be a numeric index", http.StatusBadRequest)
+				return
+			}
+			value, err := UpdateEventBinding(opts, index, input)
+			writeBuilderResult(w, value, err)
+			return
+		}
+		value, err := CreateEventBinding(opts, input)
+		writeBuilderResult(w, value, err)
+	default:
+		http.Error(w, "unsupported builder primitive", http.StatusNotFound)
+	}
+}
+
+func writeBuilderResult(w http.ResponseWriter, value interface{}, err error) {
+	if errors.Is(err, os.ErrNotExist) {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	writeJSONResponse(w, http.StatusOK, value)
+}
+
+func writeJSONResponse(w http.ResponseWriter, status int, value interface{}) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	_ = json.NewEncoder(w).Encode(value)
 }
 
 func RenderFactoryGraphHTML(graph FactoryGraph) (string, error) {
@@ -202,6 +392,7 @@ button, code { font: inherit; }
 }
 .dot.automation { background: oklch(58% 0.12 275); }
 .dot.circuit { background: oklch(61% 0.13 36); }
+.dot.command { background: oklch(54% 0.11 15); }
 .dot.sector { background: oklch(60% 0.10 205); }
 .main {
   padding: 24px;
@@ -298,6 +489,60 @@ button, code { font: inherit; }
 }
 .run:hover { border-color: var(--accent); }
 .run:focus-visible { outline: 3px solid color-mix(in oklch, var(--accent) 30%, transparent); outline-offset: 2px; }
+.builder {
+  display: grid;
+  gap: 12px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  border-radius: 8px;
+  padding: 14px;
+}
+.builder-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+.builder-form {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+  display: grid;
+  gap: 8px;
+}
+.builder-form h3 {
+  margin: 0;
+  font-size: .9rem;
+}
+.builder-form label {
+  display: grid;
+  gap: 5px;
+  color: var(--muted);
+  font-size: .78rem;
+}
+.builder-form input,
+.builder-form textarea {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 7px;
+  background: var(--surface);
+  color: var(--ink);
+}
+.builder-form textarea { min-height: 72px; resize: vertical; }
+.builder-form button {
+  border: 1px solid color-mix(in oklch, var(--accent) 50%, var(--line));
+  border-radius: 7px;
+  background: var(--accent-soft);
+  color: var(--ink);
+  padding: 8px;
+  cursor: pointer;
+}
+.builder-message {
+  min-height: 18px;
+  color: var(--muted);
+  font-size: .8rem;
+  overflow-wrap: anywhere;
+}
 .links {
   border-top: 1px solid var(--line);
   padding-top: 8px;
@@ -382,6 +627,7 @@ button, code { font: inherit; }
       <div class="legend-row"><span class="dot automation"></span>Automations</div>
       <div class="legend-row"><span class="dot"></span>Machines</div>
       <div class="legend-row"><span class="dot circuit"></span>Circuits</div>
+      <div class="legend-row"><span class="dot command"></span>Commands</div>
       <div class="legend-row"><span class="dot sector"></span>Sectors</div>
     </div>
   </aside>
@@ -394,6 +640,55 @@ button, code { font: inherit; }
     </section>
     <section class="map" aria-label="Factory production map">
       <div class="lanes" id="lanes"></div>
+    </section>
+    <section class="builder" aria-label="Factory builder">
+      <div class="toolbar">
+        <div>
+          <h2>Factory Builder</h2>
+          <p>Create concrete circuits, machines, automations, commands, and event bindings through structured controls.</p>
+        </div>
+      </div>
+      <div class="builder-grid">
+        <form class="builder-form" data-kind="circuits">
+          <h3>Circuit</h3>
+          <label>ID<input name="id" placeholder="plan-work"></label>
+          <label>Name<input name="name" placeholder="Plan work"></label>
+          <label>Description<textarea name="description"></textarea></label>
+          <button type="submit">Create circuit</button>
+          <div class="builder-message"></div>
+        </form>
+        <form class="builder-form" data-kind="machines">
+          <h3>Machine</h3>
+          <label>ID<input name="id" placeholder="build-package"></label>
+          <label>Name<input name="name" placeholder="Build package"></label>
+          <label>Circuits<input name="circuits" placeholder="plan-work, implement-work"></label>
+          <button type="submit">Create machine</button>
+          <div class="builder-message"></div>
+        </form>
+        <form class="builder-form" data-kind="automations">
+          <h3>Automation</h3>
+          <label>ID<input name="id" placeholder="process-package"></label>
+          <label>Name<input name="name" placeholder="Process package"></label>
+          <label>Machines<input name="machines" placeholder="build-package, release-package"></label>
+          <button type="submit">Create automation</button>
+          <div class="builder-message"></div>
+        </form>
+        <form class="builder-form" data-kind="commands">
+          <h3>Command</h3>
+          <label>Name<input name="name" placeholder="load-intake"></label>
+          <label>Description<textarea name="description"></textarea></label>
+          <button type="submit">Create command</button>
+          <div class="builder-message"></div>
+        </form>
+        <form class="builder-form" data-kind="bindings">
+          <h3>Event Binding</h3>
+          <label>On<input name="on" placeholder="command.completed"></label>
+          <label>Source command<input name="source" placeholder="load-intake"></label>
+          <label>Run command<input name="run" placeholder="drain-work-package"></label>
+          <button type="submit">Create binding</button>
+          <div class="builder-message"></div>
+        </form>
+      </div>
     </section>
     <section aria-label="Run monitor">
       <div class="toolbar">
@@ -439,6 +734,7 @@ for (const laneId of laneOrder) {
   for (const node of nodes) section.append(renderNode(node));
   lanesEl.append(section);
 }
+wireBuilderForms();
 renderRuns();
 function renderNode(node) {
   const item = document.createElement("article");
@@ -552,10 +848,73 @@ function renderDecisionControl(control) {
   return field;
 }
 function runCommandFor(node) {
-  const id = node.id.replace(/^(machine|automation)-/, "");
+  const id = node.id.replace(/^(command|machine|automation)-/, "");
+  if (node.type === "command") return "factory run " + id;
   if (node.type === "machine") return "factory run machine " + id;
   if (node.type === "automation") return "factory run automation " + id;
   return "";
+}
+function wireBuilderForms() {
+  for (const form of document.querySelectorAll(".builder-form")) {
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const message = form.querySelector(".builder-message");
+      message.textContent = "Saving...";
+      const kind = form.dataset.kind;
+      const body = builderPayload(kind, new FormData(form));
+      try {
+        const response = await fetch("/api/builder/" + kind, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body)
+        });
+        const text = await response.text();
+        if (!response.ok) {
+          message.textContent = text.trim() || "Validation failed.";
+          return;
+        }
+        message.textContent = "Saved. Refresh to update the map.";
+        form.reset();
+      } catch (error) {
+        message.textContent = String(error);
+      }
+    });
+  }
+}
+function builderPayload(kind, data) {
+  const values = Object.fromEntries(data.entries());
+  if (kind === "circuits") {
+    return { id: clean(values.id), name: clean(values.name), description: clean(values.description) };
+  }
+  if (kind === "machines") {
+    return {
+      id: clean(values.id),
+      name: clean(values.name),
+      circuits: splitList(values.circuits).map((circuit) => ({ circuit }))
+    };
+  }
+  if (kind === "automations") {
+    return {
+      id: clean(values.id),
+      name: clean(values.name),
+      machines: splitList(values.machines).map((machine) => ({ machine }))
+    };
+  }
+  if (kind === "commands") {
+    return { name: clean(values.name), description: clean(values.description) };
+  }
+  return {
+    on: clean(values.on),
+    where: clean(values.source) ? { command: clean(values.source) } : {},
+    run: clean(values.run),
+    mode: "auto"
+  };
+}
+function splitList(value) {
+  return String(value || "").split(",").map((item) => item.trim()).filter(Boolean);
+}
+function clean(value) {
+  return String(value || "").trim();
 }
 </script>
 </body>

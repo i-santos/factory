@@ -15,6 +15,13 @@ func TestGUIHandlerServesHTMLAndGraphAPI(t *testing.T) {
 	if err := InitWorkspace(root, DefaultWorkspaceRoot); err != nil {
 		t.Fatal(err)
 	}
+	cfg, err := LoadConfig(root, DefaultWorkspaceRoot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateCommand(root, cfg, CommandDefinition{Name: "load-intake"}, "prompt"); err != nil {
+		t.Fatal(err)
+	}
 	runDir := filepath.Join(root, DefaultWorkspaceRoot, "runs")
 	if err := os.MkdirAll(runDir, 0o755); err != nil {
 		t.Fatal(err)
@@ -62,6 +69,12 @@ func TestGUIHandlerServesHTMLAndGraphAPI(t *testing.T) {
 	if !strings.Contains(htmlResp.Body.String(), "Choose route") {
 		t.Fatalf("expected decision request in GUI, got:\n%s", htmlResp.Body.String())
 	}
+	if !strings.Contains(htmlResp.Body.String(), "Factory Builder") {
+		t.Fatalf("expected builder panel, got:\n%s", htmlResp.Body.String())
+	}
+	if !strings.Contains(htmlResp.Body.String(), `node.type === "command"`) {
+		t.Fatalf("expected command-specific run affordance, got:\n%s", htmlResp.Body.String())
+	}
 
 	graphResp := httptest.NewRecorder()
 	handler.ServeHTTP(graphResp, httptest.NewRequest(http.MethodGet, "/api/graph", nil))
@@ -79,5 +92,21 @@ func TestGUIHandlerServesHTMLAndGraphAPI(t *testing.T) {
 	}
 	if !strings.Contains(runsResp.Body.String(), `"needs-human-action"`) {
 		t.Fatalf("expected human action run in API, got:\n%s", runsResp.Body.String())
+	}
+
+	createCircuitResp := httptest.NewRecorder()
+	handler.ServeHTTP(createCircuitResp, httptest.NewRequest(http.MethodPost, "/api/builder/circuits", strings.NewReader(`{"id":"plan-work","name":"Plan Work"}`)))
+	if createCircuitResp.Code != http.StatusOK {
+		t.Fatalf("expected create circuit status 200, got %d: %s", createCircuitResp.Code, createCircuitResp.Body.String())
+	}
+	createMachineResp := httptest.NewRecorder()
+	handler.ServeHTTP(createMachineResp, httptest.NewRequest(http.MethodPost, "/api/builder/machines", strings.NewReader(`{"id":"build-work","circuits":[{"circuit":"plan-work"}]}`)))
+	if createMachineResp.Code != http.StatusOK {
+		t.Fatalf("expected create machine status 200, got %d: %s", createMachineResp.Code, createMachineResp.Body.String())
+	}
+	invalidMachineResp := httptest.NewRecorder()
+	handler.ServeHTTP(invalidMachineResp, httptest.NewRequest(http.MethodPost, "/api/builder/machines", strings.NewReader(`{"id":"bad-work","circuits":[{"circuit":"missing"}]}`)))
+	if invalidMachineResp.Code != http.StatusBadRequest {
+		t.Fatalf("expected invalid machine status 400, got %d", invalidMachineResp.Code)
 	}
 }

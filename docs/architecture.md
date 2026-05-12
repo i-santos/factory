@@ -144,8 +144,12 @@ The exact layout can evolve, but the model must remain stable. The reusable proj
 - circuits are reusable prompt runtimes
 - machines are ordered circuit sets
 - automations are ordered machine workflows
+- commands are operator-facing prompt-program entries
+- event bindings connect command results to configured follow-up commands
 - sectors are organization-only
 - templates are exportable factory definitions
+
+The builder and GUI must keep commands distinct from machines. Registered commands use `factory run <command>`. Reusable machines use `factory run machine <name>`.
 
 ## New Factory Flow
 
@@ -188,6 +192,7 @@ Initial command families:
 - `factory machine ...`
 - `factory automation ...`
 - `factory sector ...`
+- `factory run <command>`
 - `factory run machine <name>`
 - `factory run automation <name>`
 - `factory template export`
@@ -199,6 +204,7 @@ Initial command families:
 - A circuit is the only agent-executed unit.
 - A machine is not an agent; it is an ordered circuit definition.
 - An automation is not an agent; it is an ordered machine workflow.
+- A command is not a reusable machine; it is an operator-facing registry entry.
 - A sector never constrains execution.
 - The orchestrator must not interpret prompt-specific meaning.
 - The orchestrator may continue automatically only from configured structured next actions.

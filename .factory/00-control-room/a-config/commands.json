@@ -1,23 +1,4 @@
 {
   "schemaVersion": 1,
-  "commands": {
-    "evolve-factory-cli": {
-      "name": "evolve-factory-cli",
-      "prompt": "project://.factory/00-control-room/b-commands/evolve-factory-cli.md",
-      "aliases": [
-        "evolve"
-      ],
-      "description": "Evolve Factory by generating and mapping CLI-owned command prompts.",
-      "resultSchema": "factory://schemas/command-result.v1.json",
-      "emits": [
-        "command.completed",
-        "command.blocked",
-        "command.failed",
-        "command.waiting"
-      ],
-      "consumes": [
-        "operator.requested"
-      ]
-    }
-  }
+  "commands": {}
 }

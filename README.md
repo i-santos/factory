@@ -8,6 +8,8 @@ The `.factory/` directory in this repository is not the app. It is this reposito
 
 ## Current Model
 
+Factory is built from distinct primitives. Circuits are agent-executed prompt runtimes, machines are ordered circuit sets, automations are ordered machine workflows, commands are operator-facing prompt-program entries, and event bindings connect command results to deterministic follow-up commands.
+
 Factory command behavior is materialized as prompt-program files and mapped through a structured registry in a workspace:
 
 ```text
@@ -27,7 +29,7 @@ The source of truth is:
 - `event-bindings.json` for autonomous continuation rules
 - event logs for runtime history
 
-The CLI must not hard-code workflow commands. Users create commands and bindings to define their own production line.
+The CLI must not hard-code workflow commands. Users create primitives and bindings to define their own production line. Commands are not reusable machines: commands run with `factory run <command>`, while reusable machines run with `factory run machine <machine>`.
 
 Factory supports two execution styles:
 - Manual: the user runs one command or next step at a time.

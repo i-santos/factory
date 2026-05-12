@@ -76,7 +76,7 @@ func BuildFactoryGraph(opts VisualizationOptions) (FactoryGraph, error) {
 		builder.addNode(GraphNode{
 			ID:          commandNodeID(def.Name),
 			Label:       def.Name,
-			Type:        "machine",
+			Type:        "command",
 			Path:        strings.TrimPrefix(def.Prompt, "project://"),
 			Description: def.Description,
 			Aliases:     append([]string(nil), def.Aliases...),
