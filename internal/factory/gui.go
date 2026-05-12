@@ -40,7 +40,12 @@ func NewGUIHandler(opts GUIOptions) http.Handler {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		html, err := RenderFactoryGraphHTML(graph)
+		runs, err := ListRunSessions(opts.ProjectRoot, opts.WorkspaceRoot)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		html, err := RenderFactoryGUIHTML(graph, runs)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -57,11 +62,31 @@ func NewGUIHandler(opts GUIOptions) http.Handler {
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(graph)
 	})
+	mux.HandleFunc("/api/runs", func(w http.ResponseWriter, r *http.Request) {
+		runs, err := ListRunSessions(opts.ProjectRoot, opts.WorkspaceRoot)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(runs)
+	})
 	return mux
 }
 
 func RenderFactoryGraphHTML(graph FactoryGraph) (string, error) {
+	return RenderFactoryGUIHTML(graph, nil)
+}
+
+func RenderFactoryGUIHTML(graph FactoryGraph, runs []RunSession) (string, error) {
+	if runs == nil {
+		runs = []RunSession{}
+	}
 	graphJSON, err := json.Marshal(graph)
+	if err != nil {
+		return "", err
+	}
+	runsJSON, err := json.Marshal(runs)
 	if err != nil {
 		return "", err
 	}
@@ -69,9 +94,11 @@ func RenderFactoryGraphHTML(graph FactoryGraph) (string, error) {
 	err = guiTemplate.Execute(&out, struct {
 		Graph     FactoryGraph
 		GraphJSON template.JS
+		RunsJSON  template.JS
 	}{
 		Graph:     graph,
 		GraphJSON: template.JS(graphJSON),
+		RunsJSON:  template.JS(runsJSON),
 	})
 	if err != nil {
 		return "", err
@@ -285,6 +312,56 @@ button, code { font: inherit; }
   color: var(--muted);
   font-size: .84rem;
 }
+.run-monitor {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px;
+}
+.run-card {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  padding: 12px;
+  display: grid;
+  gap: 8px;
+}
+.run-card[data-status="needs-human-action"] {
+  border-color: color-mix(in oklch, var(--warn) 70%, var(--line));
+  background: color-mix(in oklch, var(--warn) 18%, var(--surface));
+}
+.status-pill {
+  display: inline-flex;
+  width: fit-content;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  padding: 3px 8px;
+  font-size: .72rem;
+  color: var(--muted);
+}
+.decision {
+  border-top: 1px solid var(--line);
+  padding-top: 8px;
+  display: grid;
+  gap: 8px;
+}
+.decision-control {
+  display: grid;
+  gap: 5px;
+}
+.decision-control label {
+  font-size: .78rem;
+  color: var(--muted);
+}
+.decision-control input,
+.decision-control textarea,
+.decision-control select {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 7px;
+  background: var(--surface);
+  color: var(--ink);
+}
 @media (max-width: 860px) {
   .shell { grid-template-columns: 1fr; }
   .sidebar { border-right: 0; border-bottom: 1px solid var(--line); }
@@ -318,10 +395,20 @@ button, code { font: inherit; }
     <section class="map" aria-label="Factory production map">
       <div class="lanes" id="lanes"></div>
     </section>
+    <section aria-label="Run monitor">
+      <div class="toolbar">
+        <div>
+          <h2>Run Monitor</h2>
+          <p>Watch durable run state and respond when the factory needs human input.</p>
+        </div>
+      </div>
+      <div class="run-monitor" id="run-monitor"></div>
+    </section>
   </main>
 </div>
 <script>
 const graph = {{.GraphJSON}};
+const runs = {{.RunsJSON}};
 const laneOrder = ["dock", "yard", "shop-floor", "finished-goods", "sectors"];
 const laneTargets = new Map(laneOrder.map((id) => [id, []]));
 const byId = new Map(graph.nodes.map((node) => [node.id, node]));
@@ -352,6 +439,7 @@ for (const laneId of laneOrder) {
   for (const node of nodes) section.append(renderNode(node));
   lanesEl.append(section);
 }
+renderRuns();
 function renderNode(node) {
   const item = document.createElement("article");
   item.className = "node";
@@ -391,6 +479,77 @@ function renderNode(node) {
     item.append(links);
   }
   return item;
+}
+function renderRuns() {
+  const monitor = document.getElementById("run-monitor");
+  if (!runs.length) {
+    const empty = document.createElement("div");
+    empty.className = "empty";
+    empty.textContent = "No durable runs recorded yet.";
+    monitor.append(empty);
+    return;
+  }
+  for (const run of runs) {
+    const card = document.createElement("article");
+    card.className = "run-card";
+    card.dataset.status = run.status || "";
+    const title = document.createElement("div");
+    title.className = "node-title";
+    title.textContent = run.targetId || run.runId;
+    const status = document.createElement("span");
+    status.className = "status-pill";
+    status.textContent = run.status || "unknown";
+    const summary = document.createElement("p");
+    summary.textContent = (run.steps || []).length + " step(s) recorded";
+    card.append(title, status, summary);
+    if (run.decisionRequest) card.append(renderDecision(run.decisionRequest));
+    monitor.append(card);
+  }
+}
+function renderDecision(decision) {
+  const wrap = document.createElement("div");
+  wrap.className = "decision";
+  const title = document.createElement("strong");
+  title.textContent = decision.title || "Human action required";
+  wrap.append(title);
+  if (decision.description) {
+    const desc = document.createElement("p");
+    desc.textContent = decision.description;
+    wrap.append(desc);
+  }
+  for (const control of decision.controls || []) {
+    wrap.append(renderDecisionControl(control));
+  }
+  return wrap;
+}
+function renderDecisionControl(control) {
+  const field = document.createElement("div");
+  field.className = "decision-control";
+  const label = document.createElement("label");
+  label.textContent = control.label || control.name || control.type;
+  field.append(label);
+  if (control.type === "option-list") {
+    const select = document.createElement("select");
+    for (const option of control.options || []) {
+      const item = document.createElement("option");
+      item.value = option.value;
+      item.textContent = option.label || option.value;
+      select.append(item);
+    }
+    field.append(select);
+  } else if (control.type === "textarea") {
+    field.append(document.createElement("textarea"));
+  } else if (control.type === "checkbox") {
+    const input = document.createElement("input");
+    input.type = "checkbox";
+    field.append(input);
+  } else {
+    const input = document.createElement("input");
+    input.type = control.type === "button" ? "button" : "text";
+    input.value = control.type === "button" ? (control.label || "Select") : "";
+    field.append(input);
+  }
+  return field;
 }
 function runCommandFor(node) {
   const id = node.id.replace(/^(machine|automation)-/, "");

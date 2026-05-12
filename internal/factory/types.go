@@ -67,6 +67,8 @@ type CommandResult struct {
 	Artifacts       []string               `json:"artifacts,omitempty"`
 	Events          []FactoryEvent         `json:"events,omitempty"`
 	Next            *NextRecommendation    `json:"next,omitempty"`
+	NextAction      *NextAction            `json:"nextAction,omitempty"`
+	DecisionRequest *DecisionRequest       `json:"decisionRequest,omitempty"`
 	MissingEvidence []string               `json:"missingEvidence,omitempty"`
 	Errors          []string               `json:"errors,omitempty"`
 	Data            map[string]interface{} `json:"data,omitempty"`
@@ -93,4 +95,55 @@ type RunRecord struct {
 	Input   map[string]interface{} `json:"input,omitempty"`
 	Result  CommandResult          `json:"result"`
 	Event   FactoryEvent           `json:"event"`
+}
+
+type RunStatus string
+
+const (
+	RunStatusIdle             RunStatus = "idle"
+	RunStatusRunning          RunStatus = "running"
+	RunStatusSucceeded        RunStatus = "succeeded"
+	RunStatusBlocked          RunStatus = "blocked"
+	RunStatusFailed           RunStatus = "failed"
+	RunStatusNeedsHumanAction RunStatus = "needs-human-action"
+)
+
+type NextAction struct {
+	Kind          string                 `json:"kind"`
+	Command       string                 `json:"command,omitempty"`
+	Input         map[string]interface{} `json:"input,omitempty"`
+	RequiresHuman bool                   `json:"requiresHuman,omitempty"`
+}
+
+type DecisionControlOption struct {
+	Value string `json:"value"`
+	Label string `json:"label"`
+}
+
+type DecisionControl struct {
+	Type    string                  `json:"type"`
+	Name    string                  `json:"name"`
+	Label   string                  `json:"label,omitempty"`
+	Options []DecisionControlOption `json:"options,omitempty"`
+}
+
+type DecisionRequest struct {
+	ID           string            `json:"id"`
+	Title        string            `json:"title"`
+	Description  string            `json:"description,omitempty"`
+	Controls     []DecisionControl `json:"controls,omitempty"`
+	SubmitAction *NextAction       `json:"submitAction,omitempty"`
+}
+
+type RunSession struct {
+	RunID           string           `json:"runId"`
+	TargetType      string           `json:"targetType"`
+	TargetID        string           `json:"targetId"`
+	Status          RunStatus        `json:"status"`
+	StartedAt       string           `json:"startedAt"`
+	FinishedAt      string           `json:"finishedAt,omitempty"`
+	Steps           []RunRecord      `json:"steps"`
+	NextAction      *NextAction      `json:"nextAction,omitempty"`
+	DecisionRequest *DecisionRequest `json:"decisionRequest,omitempty"`
+	StopReason      string           `json:"stopReason,omitempty"`
 }

@@ -55,20 +55,22 @@ type CircuitRunner interface {
 }
 
 type CircuitResult struct {
-	Status    string                 `json:"status"`
-	Summary   string                 `json:"summary,omitempty"`
-	Data      map[string]interface{} `json:"data,omitempty"`
-	Artifacts []string               `json:"artifacts,omitempty"`
-	Errors    []string               `json:"errors,omitempty"`
-	Raw       json.RawMessage        `json:"-"`
+	Status          string                 `json:"status"`
+	Summary         string                 `json:"summary,omitempty"`
+	Data            map[string]interface{} `json:"data,omitempty"`
+	Artifacts       []string               `json:"artifacts,omitempty"`
+	Errors          []string               `json:"errors,omitempty"`
+	NextAction      *NextAction            `json:"nextAction,omitempty"`
+	DecisionRequest *DecisionRequest       `json:"decisionRequest,omitempty"`
+	Raw             json.RawMessage        `json:"-"`
 }
 
 type MachineRunResult struct {
-	Status   string              `json:"status"`
-	Machine  string              `json:"machine"`
-	Circuits []CircuitRunRecord  `json:"circuits"`
-	Started  string              `json:"startedAt"`
-	Finished string              `json:"finishedAt,omitempty"`
+	Status   string             `json:"status"`
+	Machine  string             `json:"machine"`
+	Circuits []CircuitRunRecord `json:"circuits"`
+	Started  string             `json:"startedAt"`
+	Finished string             `json:"finishedAt,omitempty"`
 }
 
 type CircuitRunRecord struct {
@@ -143,7 +145,7 @@ func ParseCircuitResult(data []byte) (CircuitResult, error) {
 		return result, fmt.Errorf("circuit result missing status")
 	}
 	switch result.Status {
-	case "succeeded", "blocked", "failed", "waiting":
+	case "succeeded", "blocked", "failed", "waiting", string(RunStatusNeedsHumanAction):
 	default:
 		return result, fmt.Errorf("unsupported circuit result status %q", result.Status)
 	}

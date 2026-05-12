@@ -65,6 +65,7 @@ func InitWorkspace(projectRoot, workspaceRoot string) error {
 		"04-finished-goods/a-shipped",
 		"04-finished-goods/b-archived",
 		"05-sectors",
+		"runs",
 		"runtime",
 		"circuits/init",
 		"machines",
@@ -196,7 +197,7 @@ func CreateCommand(projectRoot string, cfg Config, def CommandDefinition, prompt
 		def.ResultSchema = ResultContractV1
 	}
 	if len(def.Emits) == 0 {
-		def.Emits = []string{"command.completed", "command.blocked", "command.failed", "command.waiting"}
+		def.Emits = []string{"command.completed", "command.blocked", "command.failed", "command.waiting", "command.needs-human-action"}
 	}
 	if len(def.Consumes) == 0 {
 		def.Consumes = []string{"operator.requested"}
