@@ -87,16 +87,29 @@ The package is complete when the Builder API and GUI no longer directly depend o
 
 ## Lifecycle Status
 
-refining
+release-ready
 
 ## Produced Work Orders
 
-None yet.
+- `.factory/04-finished-goods/d-archived/input-buffer-work-orders/20260512T211816Z-define-builder-store-boundary.dir/work-order.md`
+- `.factory/04-finished-goods/d-archived/input-buffer-work-orders/20260512T211817Z-filesystem-builder-store.dir/work-order.md`
+- `.factory/04-finished-goods/d-archived/input-buffer-work-orders/20260512T211818Z-gui-api-builder-store.dir/work-order.md`
+- `.factory/04-finished-goods/d-archived/input-buffer-work-orders/20260512T211819Z-fake-builder-store-tests.dir/work-order.md`
+- `.factory/04-finished-goods/d-archived/input-buffer-work-orders/20260512T211820Z-builder-store-docs-verification.dir/work-order.md`
+
+## Release-Ready Evidence
+
+- `.factory/04-finished-goods/b-release-ready/20260512T211816Z-builder-store-boundary.md`
+- `.factory/04-finished-goods/b-release-ready/20260512T211817Z-filesystem-builder-store.md`
+- `.factory/04-finished-goods/b-release-ready/20260512T211818Z-builder-store-gui-api.md`
+- `.factory/04-finished-goods/b-release-ready/20260512T211819Z-fake-builder-store-tests.md`
+- `.factory/04-finished-goods/b-release-ready/20260512T211820Z-builder-store-docs.md`
+- `.factory/04-finished-goods/b-release-ready/20260512T211821Z-builder-persistence-abstraction-package.md`
 
 ## Current Status
 
-- WO-01: candidate
-- WO-02: candidate
-- WO-03: candidate
-- WO-04: candidate
-- WO-05: candidate
+- WO-01: integrated
+- WO-02: integrated
+- WO-03: integrated
+- WO-04: integrated
+- WO-05: integrated
