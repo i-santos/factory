@@ -38,29 +38,51 @@ type BuilderCommandInput struct {
 	PromptBody string `json:"promptBody,omitempty"`
 }
 
+type BuilderStore interface {
+	ListInventory() (BuilderInventory, error)
+	ReadPrimitive(kind, id string) (interface{}, error)
+	SaveCircuit(input BuilderCircuitInput) (CircuitDefinition, error)
+	SaveMachine(def MachineDefinition) (MachineDefinition, error)
+	SaveAutomation(def AutomationDefinition) (AutomationDefinition, error)
+	SaveCommand(input BuilderCommandInput) (CommandDefinition, error)
+	CreateEventBinding(binding EventBinding) (EventBinding, error)
+	UpdateEventBinding(index int, binding EventBinding) (EventBinding, error)
+}
+
+type FilesystemBuilderStore struct {
+	opts BuilderOptions
+}
+
+func NewFilesystemBuilderStore(opts BuilderOptions) FilesystemBuilderStore {
+	return FilesystemBuilderStore{opts: normalizeBuilderOptions(opts)}
+}
+
 func ListBuilderInventory(opts BuilderOptions) (BuilderInventory, error) {
-	opts = normalizeBuilderOptions(opts)
-	cfg, err := LoadConfig(opts.ProjectRoot, opts.WorkspaceRoot)
+	return NewFilesystemBuilderStore(opts).ListInventory()
+}
+
+func (s FilesystemBuilderStore) ListInventory() (BuilderInventory, error) {
+	cfg, err := LoadConfig(s.opts.ProjectRoot, s.opts.WorkspaceRoot)
 	if err != nil {
 		return BuilderInventory{}, err
 	}
-	circuits, err := loadAllCircuits(opts.ProjectRoot, cfg.RootDir)
+	circuits, err := loadAllCircuits(s.opts.ProjectRoot, cfg.RootDir)
 	if err != nil {
 		return BuilderInventory{}, err
 	}
-	machines, err := loadAllMachines(opts.ProjectRoot, cfg.RootDir)
+	machines, err := loadAllMachines(s.opts.ProjectRoot, cfg.RootDir)
 	if err != nil {
 		return BuilderInventory{}, err
 	}
-	automations, err := loadAllAutomations(opts.ProjectRoot, cfg.RootDir)
+	automations, err := loadAllAutomations(s.opts.ProjectRoot, cfg.RootDir)
 	if err != nil {
 		return BuilderInventory{}, err
 	}
-	reg, err := LoadRegistry(opts.ProjectRoot, cfg)
+	reg, err := LoadRegistry(s.opts.ProjectRoot, cfg)
 	if err != nil {
 		return BuilderInventory{}, err
 	}
-	bindings, err := LoadEventBindings(opts.ProjectRoot, cfg)
+	bindings, err := LoadEventBindings(s.opts.ProjectRoot, cfg)
 	if err != nil {
 		return BuilderInventory{}, err
 	}
@@ -74,11 +96,14 @@ func ListBuilderInventory(opts BuilderOptions) (BuilderInventory, error) {
 }
 
 func CreateOrUpdateCircuit(opts BuilderOptions, input BuilderCircuitInput) (CircuitDefinition, error) {
-	opts = normalizeBuilderOptions(opts)
+	return NewFilesystemBuilderStore(opts).SaveCircuit(input)
+}
+
+func (s FilesystemBuilderStore) SaveCircuit(input BuilderCircuitInput) (CircuitDefinition, error) {
 	if err := validateBuilderID(input.ID, "circuit"); err != nil {
 		return CircuitDefinition{}, err
 	}
-	cfg, err := LoadConfig(opts.ProjectRoot, opts.WorkspaceRoot)
+	cfg, err := LoadConfig(s.opts.ProjectRoot, s.opts.WorkspaceRoot)
 	if err != nil {
 		return CircuitDefinition{}, err
 	}
@@ -96,37 +121,40 @@ func CreateOrUpdateCircuit(opts BuilderOptions, input BuilderCircuitInput) (Circ
 		def.RuntimeKernel = "project://" + filepath.ToSlash(filepath.Join(cfg.RootDir, "runtime", "runtime-kernel.md"))
 	}
 	if input.ProgramBody != "" {
-		if err := writeProjectResource(opts.ProjectRoot, def.Program, input.ProgramBody); err != nil {
+		if err := writeProjectResource(s.opts.ProjectRoot, def.Program, input.ProgramBody); err != nil {
 			return CircuitDefinition{}, err
 		}
-	} else if path, ok := projectResourcePath(opts.ProjectRoot, def.Program); ok {
+	} else if path, ok := projectResourcePath(s.opts.ProjectRoot, def.Program); ok {
 		if _, err := os.Stat(path); os.IsNotExist(err) {
-			if err := writeProjectResource(opts.ProjectRoot, def.Program, defaultBuilderCircuitProgram(def.ID)); err != nil {
+			if err := writeProjectResource(s.opts.ProjectRoot, def.Program, defaultBuilderCircuitProgram(def.ID)); err != nil {
 				return CircuitDefinition{}, err
 			}
 		} else if err != nil {
 			return CircuitDefinition{}, err
 		}
 	}
-	if err := writeJSON(filepath.Join(opts.ProjectRoot, cfg.RootDir, "circuits", def.ID, "circuit.json"), def); err != nil {
+	if err := writeJSON(filepath.Join(s.opts.ProjectRoot, cfg.RootDir, "circuits", def.ID, "circuit.json"), def); err != nil {
 		return CircuitDefinition{}, err
 	}
 	return def, nil
 }
 
 func CreateOrUpdateMachine(opts BuilderOptions, def MachineDefinition) (MachineDefinition, error) {
-	opts = normalizeBuilderOptions(opts)
+	return NewFilesystemBuilderStore(opts).SaveMachine(def)
+}
+
+func (s FilesystemBuilderStore) SaveMachine(def MachineDefinition) (MachineDefinition, error) {
 	if err := validateBuilderID(def.ID, "machine"); err != nil {
 		return MachineDefinition{}, err
 	}
 	if len(def.Circuits) == 0 {
 		return MachineDefinition{}, fmt.Errorf("machine circuits are required")
 	}
-	cfg, err := LoadConfig(opts.ProjectRoot, opts.WorkspaceRoot)
+	cfg, err := LoadConfig(s.opts.ProjectRoot, s.opts.WorkspaceRoot)
 	if err != nil {
 		return MachineDefinition{}, err
 	}
-	circuits, err := loadAllCircuits(opts.ProjectRoot, cfg.RootDir)
+	circuits, err := loadAllCircuits(s.opts.ProjectRoot, cfg.RootDir)
 	if err != nil {
 		return MachineDefinition{}, err
 	}
@@ -138,25 +166,28 @@ func CreateOrUpdateMachine(opts BuilderOptions, def MachineDefinition) (MachineD
 			return MachineDefinition{}, fmt.Errorf("machine references missing circuit %q", step.Circuit)
 		}
 	}
-	if err := writeJSON(filepath.Join(opts.ProjectRoot, cfg.RootDir, "machines", def.ID+".json"), def); err != nil {
+	if err := writeJSON(filepath.Join(s.opts.ProjectRoot, cfg.RootDir, "machines", def.ID+".json"), def); err != nil {
 		return MachineDefinition{}, err
 	}
 	return def, nil
 }
 
 func CreateOrUpdateAutomation(opts BuilderOptions, def AutomationDefinition) (AutomationDefinition, error) {
-	opts = normalizeBuilderOptions(opts)
+	return NewFilesystemBuilderStore(opts).SaveAutomation(def)
+}
+
+func (s FilesystemBuilderStore) SaveAutomation(def AutomationDefinition) (AutomationDefinition, error) {
 	if err := validateBuilderID(def.ID, "automation"); err != nil {
 		return AutomationDefinition{}, err
 	}
 	if len(def.Machines) == 0 {
 		return AutomationDefinition{}, fmt.Errorf("automation machines are required")
 	}
-	cfg, err := LoadConfig(opts.ProjectRoot, opts.WorkspaceRoot)
+	cfg, err := LoadConfig(s.opts.ProjectRoot, s.opts.WorkspaceRoot)
 	if err != nil {
 		return AutomationDefinition{}, err
 	}
-	machines, err := loadAllMachines(opts.ProjectRoot, cfg.RootDir)
+	machines, err := loadAllMachines(s.opts.ProjectRoot, cfg.RootDir)
 	if err != nil {
 		return AutomationDefinition{}, err
 	}
@@ -168,19 +199,22 @@ func CreateOrUpdateAutomation(opts BuilderOptions, def AutomationDefinition) (Au
 			return AutomationDefinition{}, fmt.Errorf("automation references missing machine %q", step.Machine)
 		}
 	}
-	if err := writeJSON(filepath.Join(opts.ProjectRoot, cfg.RootDir, "automations", def.ID+".json"), def); err != nil {
+	if err := writeJSON(filepath.Join(s.opts.ProjectRoot, cfg.RootDir, "automations", def.ID+".json"), def); err != nil {
 		return AutomationDefinition{}, err
 	}
 	return def, nil
 }
 
 func CreateOrUpdateCommand(opts BuilderOptions, input BuilderCommandInput) (CommandDefinition, error) {
-	opts = normalizeBuilderOptions(opts)
+	return NewFilesystemBuilderStore(opts).SaveCommand(input)
+}
+
+func (s FilesystemBuilderStore) SaveCommand(input BuilderCommandInput) (CommandDefinition, error) {
 	def := input.CommandDefinition
 	if err := validateBuilderID(def.Name, "command"); err != nil {
 		return CommandDefinition{}, err
 	}
-	cfg, err := LoadConfig(opts.ProjectRoot, opts.WorkspaceRoot)
+	cfg, err := LoadConfig(s.opts.ProjectRoot, s.opts.WorkspaceRoot)
 	if err != nil {
 		return CommandDefinition{}, err
 	}
@@ -196,7 +230,7 @@ func CreateOrUpdateCommand(opts BuilderOptions, input BuilderCommandInput) (Comm
 	if def.Prompt == "" {
 		def.Prompt = "project://" + filepath.ToSlash(filepath.Join(cfg.Commands.ProjectCommandsDir, def.Name+".md"))
 	}
-	reg, err := LoadRegistry(opts.ProjectRoot, cfg)
+	reg, err := LoadRegistry(s.opts.ProjectRoot, cfg)
 	if err != nil {
 		return CommandDefinition{}, err
 	}
@@ -211,23 +245,26 @@ func CreateOrUpdateCommand(opts BuilderOptions, input BuilderCommandInput) (Comm
 		}
 	}
 	if input.PromptBody != "" {
-		if err := writeProjectResource(opts.ProjectRoot, def.Prompt, input.PromptBody); err != nil {
+		if err := writeProjectResource(s.opts.ProjectRoot, def.Prompt, input.PromptBody); err != nil {
 			return CommandDefinition{}, err
 		}
-	} else if err := writePromptIfMissing(opts.ProjectRoot, def.Prompt, defaultBuilderCommandPrompt(def.Name)); err != nil {
+	} else if err := writePromptIfMissing(s.opts.ProjectRoot, def.Prompt, defaultBuilderCommandPrompt(def.Name)); err != nil {
 		return CommandDefinition{}, err
 	}
 	reg.Commands[def.Name] = def
-	return def, SaveRegistry(opts.ProjectRoot, cfg, reg)
+	return def, SaveRegistry(s.opts.ProjectRoot, cfg, reg)
 }
 
 func CreateEventBinding(opts BuilderOptions, binding EventBinding) (EventBinding, error) {
-	opts = normalizeBuilderOptions(opts)
-	cfg, err := LoadConfig(opts.ProjectRoot, opts.WorkspaceRoot)
+	return NewFilesystemBuilderStore(opts).CreateEventBinding(binding)
+}
+
+func (s FilesystemBuilderStore) CreateEventBinding(binding EventBinding) (EventBinding, error) {
+	cfg, err := LoadConfig(s.opts.ProjectRoot, s.opts.WorkspaceRoot)
 	if err != nil {
 		return EventBinding{}, err
 	}
-	reg, err := LoadRegistry(opts.ProjectRoot, cfg)
+	reg, err := LoadRegistry(s.opts.ProjectRoot, cfg)
 	if err != nil {
 		return EventBinding{}, err
 	}
@@ -239,16 +276,19 @@ func CreateEventBinding(opts BuilderOptions, binding EventBinding) (EventBinding
 			return EventBinding{}, fmt.Errorf("binding source command %q is not registered", command)
 		}
 	}
-	return AddEventBinding(opts.ProjectRoot, cfg, binding)
+	return AddEventBinding(s.opts.ProjectRoot, cfg, binding)
 }
 
 func UpdateEventBinding(opts BuilderOptions, index int, binding EventBinding) (EventBinding, error) {
-	opts = normalizeBuilderOptions(opts)
-	cfg, err := LoadConfig(opts.ProjectRoot, opts.WorkspaceRoot)
+	return NewFilesystemBuilderStore(opts).UpdateEventBinding(index, binding)
+}
+
+func (s FilesystemBuilderStore) UpdateEventBinding(index int, binding EventBinding) (EventBinding, error) {
+	cfg, err := LoadConfig(s.opts.ProjectRoot, s.opts.WorkspaceRoot)
 	if err != nil {
 		return EventBinding{}, err
 	}
-	reg, err := LoadRegistry(opts.ProjectRoot, cfg)
+	reg, err := LoadRegistry(s.opts.ProjectRoot, cfg)
 	if err != nil {
 		return EventBinding{}, err
 	}
@@ -266,7 +306,7 @@ func UpdateEventBinding(opts BuilderOptions, index int, binding EventBinding) (E
 	if binding.Mode == "" {
 		binding.Mode = "auto"
 	}
-	file, err := LoadEventBindings(opts.ProjectRoot, cfg)
+	file, err := LoadEventBindings(s.opts.ProjectRoot, cfg)
 	if err != nil {
 		return EventBinding{}, err
 	}
@@ -274,24 +314,27 @@ func UpdateEventBinding(opts BuilderOptions, index int, binding EventBinding) (E
 		return EventBinding{}, os.ErrNotExist
 	}
 	file.Bindings[index] = binding
-	return binding, SaveEventBindings(opts.ProjectRoot, cfg, file)
+	return binding, SaveEventBindings(s.opts.ProjectRoot, cfg, file)
 }
 
 func ReadBuilderPrimitive(opts BuilderOptions, kind, id string) (interface{}, error) {
-	opts = normalizeBuilderOptions(opts)
-	cfg, err := LoadConfig(opts.ProjectRoot, opts.WorkspaceRoot)
+	return NewFilesystemBuilderStore(opts).ReadPrimitive(kind, id)
+}
+
+func (s FilesystemBuilderStore) ReadPrimitive(kind, id string) (interface{}, error) {
+	cfg, err := LoadConfig(s.opts.ProjectRoot, s.opts.WorkspaceRoot)
 	if err != nil {
 		return nil, err
 	}
 	switch kind {
 	case "circuits":
-		return LoadCircuit(opts.ProjectRoot, cfg.RootDir, id)
+		return LoadCircuit(s.opts.ProjectRoot, cfg.RootDir, id)
 	case "machines":
-		return LoadMachine(opts.ProjectRoot, cfg.RootDir, id)
+		return LoadMachine(s.opts.ProjectRoot, cfg.RootDir, id)
 	case "automations":
-		return LoadAutomation(opts.ProjectRoot, cfg.RootDir, id)
+		return LoadAutomation(s.opts.ProjectRoot, cfg.RootDir, id)
 	case "commands":
-		reg, err := LoadRegistry(opts.ProjectRoot, cfg)
+		reg, err := LoadRegistry(s.opts.ProjectRoot, cfg)
 		if err != nil {
 			return nil, err
 		}

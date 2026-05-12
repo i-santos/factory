@@ -16,6 +16,7 @@ type GUIOptions struct {
 	ProjectRoot   string
 	WorkspaceRoot string
 	Addr          string
+	BuilderStore  BuilderStore
 }
 
 func ServeGUI(opts GUIOptions) error {
@@ -33,6 +34,7 @@ func ServeGUI(opts GUIOptions) error {
 
 func NewGUIHandler(opts GUIOptions) http.Handler {
 	mux := http.NewServeMux()
+	builderStore := builderStoreFromGUIOptions(opts)
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/" {
 			http.NotFound(w, r)
@@ -74,12 +76,19 @@ func NewGUIHandler(opts GUIOptions) http.Handler {
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(runs)
 	})
-	mux.HandleFunc("/api/builder", builderCollectionHandler(opts))
-	mux.HandleFunc("/api/builder/", builderPrimitiveHandler(opts))
+	mux.HandleFunc("/api/builder", builderCollectionHandler(builderStore))
+	mux.HandleFunc("/api/builder/", builderPrimitiveHandler(builderStore))
 	return mux
 }
 
-func builderCollectionHandler(opts GUIOptions) http.HandlerFunc {
+func builderStoreFromGUIOptions(opts GUIOptions) BuilderStore {
+	if opts.BuilderStore != nil {
+		return opts.BuilderStore
+	}
+	return NewFilesystemBuilderStore(BuilderOptions{ProjectRoot: opts.ProjectRoot, WorkspaceRoot: opts.WorkspaceRoot})
+}
+
+func builderCollectionHandler(store BuilderStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/api/builder" {
 			http.NotFound(w, r)
@@ -89,7 +98,7 @@ func builderCollectionHandler(opts GUIOptions) http.HandlerFunc {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
-		inventory, err := ListBuilderInventory(BuilderOptions{ProjectRoot: opts.ProjectRoot, WorkspaceRoot: opts.WorkspaceRoot})
+		inventory, err := store.ListInventory()
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -98,7 +107,7 @@ func builderCollectionHandler(opts GUIOptions) http.HandlerFunc {
 	}
 }
 
-func builderPrimitiveHandler(opts GUIOptions) http.HandlerFunc {
+func builderPrimitiveHandler(store BuilderStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		path := strings.TrimPrefix(r.URL.Path, "/api/builder/")
 		parts := strings.Split(strings.Trim(path, "/"), "/")
@@ -111,30 +120,29 @@ func builderPrimitiveHandler(opts GUIOptions) http.HandlerFunc {
 		if len(parts) > 1 {
 			id = parts[1]
 		}
-		builderOpts := BuilderOptions{ProjectRoot: opts.ProjectRoot, WorkspaceRoot: opts.WorkspaceRoot}
 		switch r.Method {
 		case http.MethodGet:
-			handleBuilderGet(w, builderOpts, kind, id)
+			handleBuilderGet(w, store, kind, id)
 		case http.MethodPost:
 			if id != "" {
 				http.Error(w, "POST targets a primitive collection", http.StatusBadRequest)
 				return
 			}
-			handleBuilderWrite(w, r, builderOpts, kind, "", false)
+			handleBuilderWrite(w, r, store, kind, "", false)
 		case http.MethodPut:
 			if id == "" {
 				http.Error(w, "PUT requires a primitive id", http.StatusBadRequest)
 				return
 			}
-			handleBuilderWrite(w, r, builderOpts, kind, id, true)
+			handleBuilderWrite(w, r, store, kind, id, true)
 		default:
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		}
 	}
 }
 
-func handleBuilderGet(w http.ResponseWriter, opts BuilderOptions, kind, id string) {
-	inventory, err := ListBuilderInventory(opts)
+func handleBuilderGet(w http.ResponseWriter, store BuilderStore, kind, id string) {
+	inventory, err := store.ListInventory()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -165,7 +173,7 @@ func handleBuilderGet(w http.ResponseWriter, opts BuilderOptions, kind, id strin
 		writeJSONResponse(w, http.StatusOK, inventory.Bindings[index])
 		return
 	}
-	value, err := ReadBuilderPrimitive(opts, kind, id)
+	value, err := store.ReadPrimitive(kind, id)
 	if errors.Is(err, os.ErrNotExist) {
 		http.Error(w, "primitive not found", http.StatusNotFound)
 		return
@@ -177,7 +185,7 @@ func handleBuilderGet(w http.ResponseWriter, opts BuilderOptions, kind, id strin
 	writeJSONResponse(w, http.StatusOK, value)
 }
 
-func handleBuilderWrite(w http.ResponseWriter, r *http.Request, opts BuilderOptions, kind, id string, update bool) {
+func handleBuilderWrite(w http.ResponseWriter, r *http.Request, store BuilderStore, kind, id string, update bool) {
 	switch kind {
 	case "circuits":
 		var input BuilderCircuitInput
@@ -188,7 +196,7 @@ func handleBuilderWrite(w http.ResponseWriter, r *http.Request, opts BuilderOpti
 		if update {
 			input.ID = id
 		}
-		value, err := CreateOrUpdateCircuit(opts, input)
+		value, err := store.SaveCircuit(input)
 		writeBuilderResult(w, value, err)
 	case "machines":
 		var input MachineDefinition
@@ -199,7 +207,7 @@ func handleBuilderWrite(w http.ResponseWriter, r *http.Request, opts BuilderOpti
 		if update {
 			input.ID = id
 		}
-		value, err := CreateOrUpdateMachine(opts, input)
+		value, err := store.SaveMachine(input)
 		writeBuilderResult(w, value, err)
 	case "automations":
 		var input AutomationDefinition
@@ -210,7 +218,7 @@ func handleBuilderWrite(w http.ResponseWriter, r *http.Request, opts BuilderOpti
 		if update {
 			input.ID = id
 		}
-		value, err := CreateOrUpdateAutomation(opts, input)
+		value, err := store.SaveAutomation(input)
 		writeBuilderResult(w, value, err)
 	case "commands":
 		var input BuilderCommandInput
@@ -221,7 +229,7 @@ func handleBuilderWrite(w http.ResponseWriter, r *http.Request, opts BuilderOpti
 		if update {
 			input.Name = id
 		}
-		value, err := CreateOrUpdateCommand(opts, input)
+		value, err := store.SaveCommand(input)
 		writeBuilderResult(w, value, err)
 	case "bindings":
 		var input EventBinding
@@ -235,11 +243,11 @@ func handleBuilderWrite(w http.ResponseWriter, r *http.Request, opts BuilderOpti
 				http.Error(w, "binding id must be a numeric index", http.StatusBadRequest)
 				return
 			}
-			value, err := UpdateEventBinding(opts, index, input)
+			value, err := store.UpdateEventBinding(index, input)
 			writeBuilderResult(w, value, err)
 			return
 		}
-		value, err := CreateEventBinding(opts, input)
+		value, err := store.CreateEventBinding(input)
 		writeBuilderResult(w, value, err)
 	default:
 		http.Error(w, "unsupported builder primitive", http.StatusNotFound)
