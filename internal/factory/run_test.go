@@ -3,6 +3,7 @@ package factory
 import (
 	"context"
 	"encoding/json"
+	"strings"
 	"testing"
 )
 
@@ -88,6 +89,174 @@ func TestRunCommandChainFollowsEventBinding(t *testing.T) {
 	}
 }
 
+func TestRunCommandChainFollowsSupportedNextAction(t *testing.T) {
+	root := t.TempDir()
+	if err := InitWorkspace(root, DefaultWorkspaceRoot); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := LoadConfig(root, DefaultWorkspaceRoot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateCommand(root, cfg, CommandDefinition{Name: "prepare"}, "prepare"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateCommand(root, cfg, CommandDefinition{Name: "finish"}, "finish"); err != nil {
+		t.Fatal(err)
+	}
+	runner := &sequenceRunner{
+		results: []CommandResult{
+			{
+				Status: "succeeded",
+				NextAction: &NextAction{
+					Kind:    "command",
+					Command: "finish",
+					Input:   map[string]interface{}{"value": "ok"},
+				},
+			},
+			{Status: "succeeded"},
+		},
+	}
+	records, err := RunCommandChain(context.Background(), RunOptions{
+		ProjectRoot:       root,
+		WorkspaceRoot:     DefaultWorkspaceRoot,
+		Command:           "prepare",
+		MaxAutoIterations: 5,
+		RunID:             "run_supported_next",
+		Runner:            runner,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(records) != 2 {
+		t.Fatalf("expected 2 records, got %d", len(records))
+	}
+	if got := records[1].Input["value"]; got != "ok" {
+		t.Fatalf("unexpected next-action input: %#v", got)
+	}
+	runs, err := ListRunSessions(root, DefaultWorkspaceRoot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(runs) != 1 || runs[0].Status != RunStatusSucceeded {
+		t.Fatalf("unexpected persisted runs: %#v", runs)
+	}
+}
+
+func TestRunCommandChainBlocksUnsupportedNextAction(t *testing.T) {
+	root := t.TempDir()
+	if err := InitWorkspace(root, DefaultWorkspaceRoot); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := LoadConfig(root, DefaultWorkspaceRoot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateCommand(root, cfg, CommandDefinition{Name: "prepare"}, "prepare"); err != nil {
+		t.Fatal(err)
+	}
+	runner := &sequenceRunner{
+		results: []CommandResult{
+			{
+				Status: "succeeded",
+				NextAction: &NextAction{
+					Kind: "unsupported",
+				},
+			},
+		},
+	}
+	records, err := RunCommandChain(context.Background(), RunOptions{
+		ProjectRoot:       root,
+		WorkspaceRoot:     DefaultWorkspaceRoot,
+		Command:           "prepare",
+		MaxAutoIterations: 5,
+		RunID:             "run_blocked_next",
+		Runner:            runner,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(records) != 1 {
+		t.Fatalf("expected 1 record, got %d", len(records))
+	}
+	runs, err := ListRunSessions(root, DefaultWorkspaceRoot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(runs) != 1 {
+		t.Fatalf("expected 1 persisted run, got %#v", runs)
+	}
+	if runs[0].Status != RunStatusBlocked {
+		t.Fatalf("expected blocked run, got %#v", runs[0])
+	}
+	if !strings.Contains(runs[0].StopReason, "unsupported next action") {
+		t.Fatalf("unexpected stop reason: %q", runs[0].StopReason)
+	}
+}
+
+func TestRunCommandChainStopsForHumanDecision(t *testing.T) {
+	root := t.TempDir()
+	if err := InitWorkspace(root, DefaultWorkspaceRoot); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := LoadConfig(root, DefaultWorkspaceRoot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateCommand(root, cfg, CommandDefinition{Name: "prepare"}, "prepare"); err != nil {
+		t.Fatal(err)
+	}
+	runner := &sequenceRunner{
+		results: []CommandResult{
+			{
+				Status: "succeeded",
+				NextAction: &NextAction{
+					Kind:          "command",
+					Command:       "finish",
+					RequiresHuman: true,
+				},
+				DecisionRequest: &DecisionRequest{
+					ID:    "decision_1",
+					Title: "Choose next step",
+					Controls: []DecisionControl{
+						{
+							Type: "option-list",
+							Name: "action",
+							Options: []DecisionControlOption{
+								{Value: "continue", Label: "Continue"},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	records, err := RunCommandChain(context.Background(), RunOptions{
+		ProjectRoot:       root,
+		WorkspaceRoot:     DefaultWorkspaceRoot,
+		Command:           "prepare",
+		MaxAutoIterations: 5,
+		RunID:             "run_human",
+		Runner:            runner,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(records) != 1 {
+		t.Fatalf("expected 1 record, got %d", len(records))
+	}
+	runs, err := ListRunSessions(root, DefaultWorkspaceRoot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(runs) != 1 || runs[0].Status != RunStatusNeedsHumanAction {
+		t.Fatalf("unexpected persisted human run: %#v", runs)
+	}
+	if runs[0].DecisionRequest == nil || runs[0].DecisionRequest.Title != "Choose next step" {
+		t.Fatalf("missing decision request: %#v", runs[0])
+	}
+}
+
 func TestParseCommandResultRequiresEnvelopeStatus(t *testing.T) {
 	_, err := ParseCommandResult([]byte(`{"summary":"missing status"}`))
 	if err == nil {
@@ -97,6 +266,16 @@ func TestParseCommandResultRequiresEnvelopeStatus(t *testing.T) {
 	data, _ := json.Marshal(CommandResult{Status: "succeeded"})
 	if err := json.Unmarshal(data, &out); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestParseCommandResultAcceptsNeedsHumanAction(t *testing.T) {
+	result, err := ParseCommandResult([]byte(`{"status":"needs-human-action"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Status != string(RunStatusNeedsHumanAction) {
+		t.Fatalf("unexpected status: %q", result.Status)
 	}
 }
 

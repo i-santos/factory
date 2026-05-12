@@ -62,7 +62,7 @@ func ParseCommandResult(data []byte) (CommandResult, error) {
 		return result, fmt.Errorf("command result missing status")
 	}
 	switch result.Status {
-	case "succeeded", "blocked", "failed", "waiting":
+	case "succeeded", "blocked", "failed", "waiting", string(RunStatusNeedsHumanAction):
 	default:
 		return result, fmt.Errorf("unsupported command result status %q", result.Status)
 	}
@@ -76,6 +76,8 @@ type RunOptions struct {
 	Input             map[string]interface{}
 	MaxAutoIterations int
 	Runner            Runner
+	RunID             string
+	PersistRuns       bool
 }
 
 func RunCommandChain(ctx context.Context, opts RunOptions) ([]RunRecord, error) {
@@ -84,6 +86,10 @@ func RunCommandChain(ctx context.Context, opts RunOptions) ([]RunRecord, error) 
 	}
 	if opts.ProjectRoot == "" {
 		opts.ProjectRoot = "."
+	}
+	runID := opts.RunID
+	if strings.TrimSpace(runID) == "" {
+		runID = fmt.Sprintf("run_%d", time.Now().UnixNano())
 	}
 	cfg, err := LoadConfig(opts.ProjectRoot, opts.WorkspaceRoot)
 	if err != nil {
@@ -103,6 +109,13 @@ func RunCommandChain(ctx context.Context, opts RunOptions) ([]RunRecord, error) 
 	currentCommand := opts.Command
 	currentInput := cloneMap(opts.Input)
 	records := []RunRecord{}
+	session := RunSession{
+		RunID:      runID,
+		TargetType: "command-chain",
+		TargetID:   opts.Command,
+		Status:     RunStatusRunning,
+		StartedAt:  time.Now().UTC().Format(time.RFC3339),
+	}
 	for iteration := 0; iteration < limit; iteration++ {
 		reg, err := LoadRegistry(opts.ProjectRoot, cfg)
 		if err != nil {
@@ -122,28 +135,54 @@ func RunCommandChain(ctx context.Context, opts RunOptions) ([]RunRecord, error) 
 		}
 		record := RunRecord{Command: def.Name, Input: currentInput, Result: result, Event: event}
 		records = append(records, record)
+		session.Steps = append(session.Steps, record)
 		if result.Status != "succeeded" {
+			session.Status = statusFromCommandResult(result.Status)
+			session.NextAction = result.NextAction
+			session.DecisionRequest = result.DecisionRequest
+			session.FinishedAt = time.Now().UTC().Format(time.RFC3339)
+			if err := persistRunSession(opts.ProjectRoot, cfg, session, opts.PersistRuns); err != nil {
+				return records, err
+			}
 			return records, nil
 		}
-		next, nextInput, ok, err := NextCommandFromEvent(opts.ProjectRoot, cfg, event, result)
+		next, nextInput, ok, stopStatus, stopReason, err := NextCommand(opts.ProjectRoot, cfg, reg, event, result)
 		if err != nil {
 			return records, err
 		}
 		if !ok {
+			session.Status = stopStatus
+			if session.Status == "" {
+				session.Status = RunStatusSucceeded
+			}
+			session.NextAction = result.NextAction
+			session.DecisionRequest = result.DecisionRequest
+			session.StopReason = stopReason
+			session.FinishedAt = time.Now().UTC().Format(time.RFC3339)
+			if err := persistRunSession(opts.ProjectRoot, cfg, session, opts.PersistRuns); err != nil {
+				return records, err
+			}
 			return records, nil
 		}
 		currentCommand = next
 		currentInput = nextInput
 	}
-	return records, fmt.Errorf("auto iteration limit reached after %d iteration(s)", limit)
+	session.Status = RunStatusBlocked
+	session.StopReason = fmt.Sprintf("auto iteration limit reached after %d iteration(s)", limit)
+	session.FinishedAt = time.Now().UTC().Format(time.RFC3339)
+	if err := persistRunSession(opts.ProjectRoot, cfg, session, opts.PersistRuns); err != nil {
+		return records, err
+	}
+	return records, fmt.Errorf("%s", session.StopReason)
 }
 
 func BuildCommandEvent(command string, result CommandResult) FactoryEvent {
 	eventType := map[string]string{
-		"succeeded": "command.completed",
-		"blocked":   "command.blocked",
-		"failed":    "command.failed",
-		"waiting":   "command.waiting",
+		"succeeded":                       "command.completed",
+		"blocked":                         "command.blocked",
+		"failed":                          "command.failed",
+		"waiting":                         "command.waiting",
+		string(RunStatusNeedsHumanAction): "command.needs-human-action",
 	}[result.Status]
 	data := cloneMap(result.Data)
 	if data == nil {
@@ -179,6 +218,47 @@ func AppendEvent(projectRoot string, cfg Config, event FactoryEvent) error {
 	return err
 }
 
+func NextCommand(projectRoot string, cfg Config, reg CommandRegistry, event FactoryEvent, result CommandResult) (string, map[string]interface{}, bool, RunStatus, string, error) {
+	if result.NextAction != nil {
+		return NextCommandFromAction(reg, *result.NextAction)
+	}
+	next, nextInput, ok, err := NextCommandFromEvent(projectRoot, cfg, event, result)
+	if err != nil {
+		return "", nil, false, "", "", err
+	}
+	if !ok {
+		return "", nil, false, RunStatusSucceeded, "", nil
+	}
+	return next, nextInput, true, RunStatusRunning, "", nil
+}
+
+func NextCommandFromAction(reg CommandRegistry, action NextAction) (string, map[string]interface{}, bool, RunStatus, string, error) {
+	if action.RequiresHuman {
+		return "", nil, false, RunStatusNeedsHumanAction, "next action requires human input", nil
+	}
+	if action.Kind != "command" && action.Kind != "factory-command" {
+		return "", nil, false, RunStatusBlocked, fmt.Sprintf("unsupported next action kind %q", action.Kind), nil
+	}
+	command := strings.TrimSpace(action.Command)
+	input := cloneMap(action.Input)
+	if command == "" {
+		if value, ok := input["command"].(string); ok {
+			command = strings.TrimSpace(value)
+			delete(input, "command")
+		}
+	}
+	if nested, ok := input["input"].(map[string]interface{}); ok && len(input) == 1 {
+		input = cloneMap(nested)
+	}
+	if command == "" {
+		return "", nil, false, RunStatusBlocked, "next action is missing command", nil
+	}
+	if _, ok := ResolveCommand(reg, command); !ok {
+		return "", nil, false, RunStatusBlocked, fmt.Sprintf("next action command %q is not registered", command), nil
+	}
+	return command, input, true, RunStatusRunning, "", nil
+}
+
 func NextCommandFromEvent(projectRoot string, cfg Config, event FactoryEvent, result CommandResult) (string, map[string]interface{}, bool, error) {
 	file, err := LoadEventBindings(projectRoot, cfg)
 	if err != nil {
@@ -201,6 +281,65 @@ func NextCommandFromEvent(projectRoot string, cfg Config, event FactoryEvent, re
 		return binding.Run, input, true, nil
 	}
 	return "", nil, false, nil
+}
+
+func statusFromCommandResult(status string) RunStatus {
+	switch status {
+	case "succeeded":
+		return RunStatusSucceeded
+	case "blocked":
+		return RunStatusBlocked
+	case "failed":
+		return RunStatusFailed
+	case string(RunStatusNeedsHumanAction):
+		return RunStatusNeedsHumanAction
+	default:
+		return RunStatusBlocked
+	}
+}
+
+func persistRunSession(projectRoot string, cfg Config, session RunSession, always bool) error {
+	if !always && len(session.Steps) == 0 {
+		return nil
+	}
+	path := filepath.Join(projectRoot, cfg.RootDir, "runs", session.RunID+".json")
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return err
+	}
+	data, err := json.MarshalIndent(session, "", "  ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(path, append(data, '\n'), 0o644)
+}
+
+func ListRunSessions(projectRoot, workspaceRoot string) ([]RunSession, error) {
+	if workspaceRoot == "" {
+		workspaceRoot = DefaultWorkspaceRoot
+	}
+	if projectRoot == "" {
+		projectRoot = "."
+	}
+	dir := filepath.Join(projectRoot, workspaceRoot, "runs")
+	entries, err := os.ReadDir(dir)
+	if os.IsNotExist(err) {
+		return []RunSession{}, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	runs := []RunSession{}
+	for _, entry := range entries {
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".json") {
+			continue
+		}
+		var run RunSession
+		if err := readJSON(filepath.Join(dir, entry.Name()), &run); err != nil {
+			return nil, err
+		}
+		runs = append(runs, run)
+	}
+	return runs, nil
 }
 
 func bindingMatches(binding EventBinding, event FactoryEvent, result CommandResult) bool {

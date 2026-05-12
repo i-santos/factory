@@ -44,8 +44,8 @@ func TestBuildFactoryGraphIncludesWorkspaceCommandsBindingsAndSectors(t *testing
 	assertNode(t, graph, "automation-init", "automation")
 	assertNode(t, graph, "machine-init", "machine")
 	assertNode(t, graph, "circuit-init", "circuit")
-	assertNode(t, graph, "cmd-load-intake", "machine")
-	assertNode(t, graph, "cmd-drain-work-package", "machine")
+	assertNode(t, graph, "cmd-load-intake", "command")
+	assertNode(t, graph, "cmd-drain-work-package", "command")
 	assertNode(t, graph, "sector-product", "sector")
 	assertNode(t, graph, "sector-product-action-refine-experience", "sector-action")
 	assertEdge(t, graph, "dock", "yard", "workspace-flow")
@@ -85,7 +85,7 @@ func TestRenderFactoryGraphMermaid(t *testing.T) {
 		SchemaVersion: 1,
 		Nodes: []GraphNode{
 			{ID: "dock", Label: "01 Dock", Type: "lane"},
-			{ID: "cmd-load-intake", Label: "load-intake", Type: "machine"},
+			{ID: "cmd-load-intake", Label: "load-intake", Type: "command"},
 		},
 		Edges: []GraphEdge{{From: "dock", To: "cmd-load-intake", Type: "contains", Label: "machine"}},
 	}

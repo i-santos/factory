@@ -2,6 +2,16 @@
 
 This document defines the durable local model shared by the CLI and GUI. One factory is one filesystem folder/project.
 
+The Factory Builder model separates reusable runtime pieces from operator commands:
+
+- circuits are agent-executed prompt runtimes
+- machines are ordered sets of circuits
+- automations are ordered sets of machines
+- commands are operator-facing prompt-program entries in the command registry
+- event bindings connect command results to deterministic follow-up commands
+
+Commands are not reusable machines. A GUI may show both on the same map, but it must run commands with `factory run <command>` and reusable machines with `factory run machine <machine>`.
+
 ## Folder Shape
 
 ```text
