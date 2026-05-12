@@ -6,7 +6,7 @@ shipping-pr-pending
 
 ## Pull Request
 
-pending-until-created
+https://github.com/i-santos/factory/pull/2
 
 ## Outcome
 
