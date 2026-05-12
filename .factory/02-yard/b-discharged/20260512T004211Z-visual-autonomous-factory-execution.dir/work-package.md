@@ -79,15 +79,26 @@ The package is complete when the product context and refinement outputs provide 
 
 ## Lifecycle Status
 
-refining
+release-ready
 
 ## Produced Work Orders
 
-None yet.
+- `.factory/04-finished-goods/d-archived/input-buffer-work-orders/20260512T004719Z-add-visual-autonomous-triangulation.dir/work-order.md`
+- `.factory/04-finished-goods/d-archived/input-buffer-work-orders/20260512T004720Z-define-run-state-next-action-model.dir/work-order.md`
+- `.factory/04-finished-goods/d-archived/input-buffer-work-orders/20260512T004721Z-design-visual-human-in-loop-ux.dir/work-order.md`
+- `.factory/04-finished-goods/d-archived/input-buffer-work-orders/20260512T004722Z-define-autonomous-continuation-evals.dir/work-order.md`
+
+## Release-Ready Evidence
+
+- `.factory/04-finished-goods/b-release-ready/20260512T004719Z-visual-autonomous-triangulation.md`
+- `.factory/04-finished-goods/b-release-ready/20260512T004720Z-run-state-next-action-model.md`
+- `.factory/04-finished-goods/b-release-ready/20260512T004721Z-visual-human-in-loop-ux.md`
+- `.factory/04-finished-goods/b-release-ready/20260512T004722Z-autonomous-continuation-evals.md`
+- `.factory/04-finished-goods/b-release-ready/20260512T004723Z-visual-autonomous-factory-execution-package.md`
 
 ## Current Status
 
-- WO-01: candidate
-- WO-02: candidate
-- WO-03: candidate
-- WO-04: candidate
+- WO-01: integrated
+- WO-02: integrated
+- WO-03: integrated
+- WO-04: integrated
