@@ -95,16 +95,29 @@ The package is complete when the app has a tested foundation for durable autonom
 
 ## Lifecycle Status
 
-refining
+release-ready
 
 ## Produced Work Orders
 
-None yet.
+- `.factory/04-finished-goods/d-archived/input-buffer-work-orders/20260512T141646Z-add-run-state-next-action-models.dir/work-order.md`
+- `.factory/04-finished-goods/d-archived/input-buffer-work-orders/20260512T141647Z-implement-deterministic-continuation-rules.dir/work-order.md`
+- `.factory/04-finished-goods/d-archived/input-buffer-work-orders/20260512T141648Z-persist-load-run-records.dir/work-order.md`
+- `.factory/04-finished-goods/d-archived/input-buffer-work-orders/20260512T141649Z-expose-run-state-gui-api.dir/work-order.md`
+- `.factory/04-finished-goods/d-archived/input-buffer-work-orders/20260512T141650Z-add-autonomous-visual-run-tests.dir/work-order.md`
+
+## Release-Ready Evidence
+
+- `.factory/04-finished-goods/b-release-ready/20260512T141646Z-run-state-next-action-models.md`
+- `.factory/04-finished-goods/b-release-ready/20260512T141647Z-deterministic-continuation-rules.md`
+- `.factory/04-finished-goods/b-release-ready/20260512T141648Z-run-record-persistence.md`
+- `.factory/04-finished-goods/b-release-ready/20260512T141649Z-run-state-gui-api.md`
+- `.factory/04-finished-goods/b-release-ready/20260512T141650Z-autonomous-visual-run-tests.md`
+- `.factory/04-finished-goods/b-release-ready/20260512T141651Z-autonomous-visual-runs-package.md`
 
 ## Current Status
 
-- WO-01: candidate
-- WO-02: candidate
-- WO-03: candidate
-- WO-04: candidate
-- WO-05: candidate
+- WO-01: integrated
+- WO-02: integrated
+- WO-03: integrated
+- WO-04: integrated
+- WO-05: integrated
