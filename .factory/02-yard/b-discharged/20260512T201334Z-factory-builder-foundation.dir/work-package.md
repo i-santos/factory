@@ -99,16 +99,29 @@ The package is complete when a user can open the local Factory GUI and create th
 
 ## Lifecycle Status
 
-refining
+release-ready
 
 ## Produced Work Orders
 
-None yet.
+- `.factory/04-finished-goods/d-archived/input-buffer-work-orders/20260512T202518Z-clarify-factory-primitive-model.dir/work-order.md`
+- `.factory/04-finished-goods/d-archived/input-buffer-work-orders/20260512T202519Z-builder-persistence-validation.dir/work-order.md`
+- `.factory/04-finished-goods/d-archived/input-buffer-work-orders/20260512T202520Z-builder-api-endpoints.dir/work-order.md`
+- `.factory/04-finished-goods/d-archived/input-buffer-work-orders/20260512T202521Z-visual-builder-ui.dir/work-order.md`
+- `.factory/04-finished-goods/d-archived/input-buffer-work-orders/20260512T202522Z-builder-regression-tests.dir/work-order.md`
+
+## Release-Ready Evidence
+
+- `.factory/04-finished-goods/b-release-ready/20260512T202518Z-factory-primitive-model.md`
+- `.factory/04-finished-goods/b-release-ready/20260512T202519Z-builder-persistence-validation.md`
+- `.factory/04-finished-goods/b-release-ready/20260512T202520Z-builder-api-endpoints.md`
+- `.factory/04-finished-goods/b-release-ready/20260512T202521Z-visual-builder-ui.md`
+- `.factory/04-finished-goods/b-release-ready/20260512T202522Z-builder-regression-tests.md`
+- `.factory/04-finished-goods/b-release-ready/20260512T202523Z-factory-builder-foundation-package.md`
 
 ## Current Status
 
-- WO-01: candidate
-- WO-02: candidate
-- WO-03: candidate
-- WO-04: candidate
-- WO-05: candidate
+- WO-01: integrated
+- WO-02: integrated
+- WO-03: integrated
+- WO-04: integrated
+- WO-05: integrated
