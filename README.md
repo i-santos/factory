@@ -31,6 +31,8 @@ The source of truth is:
 
 The CLI must not hard-code workflow commands. Users create primitives and bindings to define their own production line. Commands are not reusable machines: commands run with `factory run <command>`, while reusable machines run with `factory run machine <machine>`.
 
+Builder persistence is accessed through a `BuilderStore` boundary. The current implementation is filesystem-backed and preserves the `.factory/` layout, but the GUI/API layer is designed to accept another store implementation later.
+
 Factory supports two execution styles:
 - Manual: the user runs one command or next step at a time.
 - Autonomous: the CLI follows event bindings and continues through the configured production line until completion, blockage, approval requirement, or an iteration guard.

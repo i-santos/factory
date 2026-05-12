@@ -12,6 +12,18 @@ The Factory Builder model separates reusable runtime pieces from operator comman
 
 Commands are not reusable machines. A GUI may show both on the same map, but it must run commands with `factory run <command>` and reusable machines with `factory run machine <machine>`.
 
+## Builder Persistence
+
+The Factory Builder uses a `BuilderStore` persistence boundary. The default implementation is filesystem-backed and writes the canonical `.factory/` layout described below. Other implementations, such as SQLite, Postgres, or remote services, can implement the same store contract without changing the Builder API handlers.
+
+Filesystem persistence remains the source-compatible default:
+
+- circuits write to `.factory/circuits/<id>/circuit.json` and `.factory/circuits/<id>/program.md`
+- machines write to `.factory/machines/<id>.json`
+- automations write to `.factory/automations/<id>.json`
+- commands write to `.factory/00-control-room/a-config/commands.json` and `.factory/00-control-room/b-commands/<name>.md`
+- event bindings write to `.factory/00-control-room/a-config/event-bindings.json`
+
 ## Folder Shape
 
 ```text

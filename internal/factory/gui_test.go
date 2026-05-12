@@ -110,3 +110,76 @@ func TestGUIHandlerServesHTMLAndGraphAPI(t *testing.T) {
 		t.Fatalf("expected invalid machine status 400, got %d", invalidMachineResp.Code)
 	}
 }
+
+func TestBuilderAPIUsesInjectedStore(t *testing.T) {
+	store := &fakeBuilderStore{
+		inventory: BuilderInventory{
+			Circuits: []CircuitDefinition{{ID: "from-store", Name: "From Store"}},
+		},
+	}
+	handler := NewGUIHandler(GUIOptions{
+		ProjectRoot:   t.TempDir(),
+		WorkspaceRoot: DefaultWorkspaceRoot,
+		BuilderStore:  store,
+	})
+
+	listResp := httptest.NewRecorder()
+	handler.ServeHTTP(listResp, httptest.NewRequest(http.MethodGet, "/api/builder/circuits", nil))
+	if listResp.Code != http.StatusOK {
+		t.Fatalf("expected list status 200, got %d", listResp.Code)
+	}
+	if !strings.Contains(listResp.Body.String(), "from-store") {
+		t.Fatalf("expected injected store response, got:\n%s", listResp.Body.String())
+	}
+
+	createResp := httptest.NewRecorder()
+	handler.ServeHTTP(createResp, httptest.NewRequest(http.MethodPost, "/api/builder/circuits", strings.NewReader(`{"id":"api-circuit","name":"API Circuit"}`)))
+	if createResp.Code != http.StatusOK {
+		t.Fatalf("expected create status 200, got %d: %s", createResp.Code, createResp.Body.String())
+	}
+	if store.savedCircuit.ID != "api-circuit" {
+		t.Fatalf("expected API to call injected store, got %#v", store.savedCircuit)
+	}
+}
+
+type fakeBuilderStore struct {
+	inventory    BuilderInventory
+	savedCircuit CircuitDefinition
+}
+
+func (s *fakeBuilderStore) ListInventory() (BuilderInventory, error) {
+	return s.inventory, nil
+}
+
+func (s *fakeBuilderStore) ReadPrimitive(kind, id string) (interface{}, error) {
+	if kind == "circuits" && id == "from-store" {
+		return s.inventory.Circuits[0], nil
+	}
+	return nil, os.ErrNotExist
+}
+
+func (s *fakeBuilderStore) SaveCircuit(input BuilderCircuitInput) (CircuitDefinition, error) {
+	s.savedCircuit = CircuitDefinition{ID: input.ID, Name: input.Name}
+	s.inventory.Circuits = append(s.inventory.Circuits, s.savedCircuit)
+	return s.savedCircuit, nil
+}
+
+func (s *fakeBuilderStore) SaveMachine(def MachineDefinition) (MachineDefinition, error) {
+	return def, nil
+}
+
+func (s *fakeBuilderStore) SaveAutomation(def AutomationDefinition) (AutomationDefinition, error) {
+	return def, nil
+}
+
+func (s *fakeBuilderStore) SaveCommand(input BuilderCommandInput) (CommandDefinition, error) {
+	return input.CommandDefinition, nil
+}
+
+func (s *fakeBuilderStore) CreateEventBinding(binding EventBinding) (EventBinding, error) {
+	return binding, nil
+}
+
+func (s *fakeBuilderStore) UpdateEventBinding(_ int, binding EventBinding) (EventBinding, error) {
+	return binding, nil
+}
