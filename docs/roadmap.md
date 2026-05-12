@@ -98,3 +98,18 @@ Deliverables:
 
 Exit criteria:
 - a factory created in the CLI can be opened in the GUI, modified, run, exported, and reused.
+
+## Phase 7: Autonomous Visual Operations
+
+Goal: let users run factories from a remote web UI with low cognitive load, automatic continuation for safe next actions, and visual human-in-the-loop decision collection.
+
+Deliverables:
+- durable run-state model with `needs-human-action`
+- deterministic next-action envelope for safe automatic continuation
+- web run monitor that shows active, completed, blocked, failed, and waiting-for-human states
+- decision request model for buttons, option lists, forms, text inputs, and structured panels
+- GUI decision submission flow that writes user input back into the run state
+- evals for automatic continuation, ambiguous next actions, and human-stop boundaries
+
+Exit criteria:
+- a user can start a run from the web UI, watch it continue through configured next actions, and provide requested human input without manually locating and reading Factory Markdown files.

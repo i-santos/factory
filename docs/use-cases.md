@@ -90,3 +90,15 @@ Acceptance criteria:
 - machines can contain one circuit or many circuits
 - circuit scope is intentionally narrow
 - orchestration supplies grain-control over the workflow
+
+## UC-11: Continue Runs Until Human Input Is Needed
+
+The user starts an automation from a web UI and watches it move through the factory as a visual production chain. When a machine, circuit, or factory operation finishes with a configured next action, the orchestrator continues automatically. When the run needs a human decision, the run pauses and the UI shows a visible decision request.
+
+Acceptance criteria:
+- the web UI can show a running chain without requiring the user to read Markdown files
+- deterministic next actions can continue automatically without human dispatch
+- ambiguous, unsupported, failed, or human-required results stop the chain visibly
+- human-in-the-loop requests appear as first-class visual work, not hidden log text
+- decision requests can present buttons, option lists, forms, text inputs, or structured panels
+- every automatic continuation is driven by configured structure, not agent guessing

@@ -25,6 +25,8 @@ The orchestrator owns:
 - waiting for each circuit and machine to finish
 - recording execution state
 - stopping on failure or blocked output
+- continuing from configured next actions when the result is deterministic
+- surfacing human decision requests as durable run state
 
 The circuit owns:
 - loading `runtime-kernel.md`
@@ -33,6 +35,8 @@ The circuit owns:
 - reasoning through `Pseudo.*` operations
 - returning structured output
 - recording trace evidence
+
+The orchestrator must not infer intent from prose in a circuit result. Automatic continuation is allowed only when a result includes a structured next-action envelope that matches configured machine, automation, or factory-command policy. If the next action is missing, ambiguous, unsupported, or marked as human-required, the orchestrator records a blocked or `needs-human-action` state instead of guessing.
 
 ## Execution Model
 
@@ -50,6 +54,56 @@ automation
 The orchestrator waits for each circuit to finish before invoking the next circuit. The orchestrator waits for each machine to finish before invoking the next machine.
 
 Parallel execution is not an orchestrator concern in the first version. If parallel work is needed, a circuit may spawn subagents as part of its own prompt-program.
+
+## Autonomous Continuation
+
+Autonomous continuation is deterministic application behavior, not agentic improvisation.
+
+A completed run step may request continuation with a structured next action such as:
+
+```json
+{
+  "kind": "process-work-package",
+  "input": {
+    "packagePath": ".factory/02-yard/a-refining/example.dir"
+  },
+  "requiresHuman": false
+}
+```
+
+The orchestrator may execute that next action only when:
+
+- the next-action kind is supported by the factory configuration
+- the input validates against the action schema
+- the current run policy allows that transition
+- the result does not require human input
+- the transition does not target a protected base branch directly
+
+If any condition fails, the orchestrator records a visible non-continuing state. The default failure mode is to stop and ask for human input, not to continue with a best guess.
+
+## Human-In-The-Loop State
+
+Human input is a first-class runtime state.
+
+Run status values include:
+
+- `idle`
+- `running`
+- `succeeded`
+- `blocked`
+- `failed`
+- `needs-human-action`
+
+A `needs-human-action` run stores a decision request with:
+
+- a human-readable title
+- explanation of why input is required
+- available options when the choice is bounded
+- form fields when structured input is needed
+- free-text fields only when bounded controls are insufficient
+- submit target that resumes or updates the run
+
+The GUI renders this state as visual work on the factory map and in the run monitor. The user should not need to inspect Markdown records, logs, or internal folders to understand what decision is needed.
 
 ## Runtime Kernel
 
@@ -120,7 +174,9 @@ Primary views:
 - run monitor
 - template import/export
 
-The map should show execution state directly: idle, running, blocked, failed, and completed.
+The map should show execution state directly: idle, running, blocked, failed, completed, and needs-human-action.
+
+Human decision collection is part of the GUI surface. The GUI should render requested decisions with HTML controls such as buttons, option lists, forms, text inputs, or structured decision panels. These controls submit structured input back into the run state so the orchestrator can resume only through configured transitions.
 
 ## CLI Architecture
 
@@ -145,5 +201,7 @@ Initial command families:
 - An automation is not an agent; it is an ordered machine workflow.
 - A sector never constrains execution.
 - The orchestrator must not interpret prompt-specific meaning.
+- The orchestrator may continue automatically only from configured structured next actions.
+- Human-required, ambiguous, unsupported, failed, or blocked outputs stop the run visibly.
 - Prompt-programs must follow the runtime kernel.
 - Factory state must be reusable and portable across local projects.

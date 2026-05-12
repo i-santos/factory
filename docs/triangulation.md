@@ -28,12 +28,15 @@ The orchestrator is deterministic application code. It loads factory configurati
 - [Architecture](architecture.md)
 - [Runtime Kernel](runtime-kernel.md)
 - [Project Model](project-model.md)
+- [Evals](evals.md)
 
 ## Invariants
 
 - Circuits are the only agent-executed runtime unit.
 - Machines and automations are orchestrated by the application, not improvised by an agent.
 - The initial orchestrator runs serially.
+- Automatic continuation is allowed only from configured structured next actions.
+- Human-required or ambiguous runtime output becomes visible `needs-human-action` or blocked state.
 - Parallel work happens inside a circuit when a circuit explicitly spawns subagents.
 - Sectors do not define behavior.
 - Every circuit loads a `runtime-kernel.md`.
